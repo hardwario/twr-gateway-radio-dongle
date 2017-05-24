@@ -309,7 +309,7 @@ static void _usb_talk_process_message(char *message, size_t length)
     for (size_t i = 0; i < _usb_talk.subscribes_length; i++)
     {
 
-        if ((*_usb_talk.subscribes[i].device_address == device_address) && (strncmp(_usb_talk.subscribes[i].topic, topic + 8, topic_length - 8) == 0))
+        if ((*_usb_talk.subscribes[i].device_address == device_address) && (strncmp(_usb_talk.subscribes[i].topic, topic + 12, topic_length - 12) == 0))
         {
             usb_talk_payload_t payload = {
                     message,

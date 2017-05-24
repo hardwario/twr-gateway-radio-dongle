@@ -198,6 +198,8 @@ void application_task(void)
         bc_module_lcd_update();
         lcd.next_update = now + 500;
     }
+
+    bc_scheduler_plan_current_relative(500);
 }
 
 static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)

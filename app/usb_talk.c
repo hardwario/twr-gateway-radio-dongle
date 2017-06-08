@@ -20,7 +20,6 @@ static struct
     bool rx_error;
 
     struct {
-        uint64_t *device_address;
         const char *topic;
         usb_talk_sub_callback_t callback;
         void *param;
@@ -44,12 +43,11 @@ void usb_talk_init(void)
     bc_scheduler_register(_usb_talk_task, NULL, 0);
 }
 
-void usb_talk_sub(uint64_t *device_address, const char *topic, usb_talk_sub_callback_t callback, void *param)
+void usb_talk_sub(const char *topic, usb_talk_sub_callback_t callback, void *param)
 {
     if (_usb_talk.subscribes_length >= USB_TALK_SUBSCRIBES){
         return;
     }
-    _usb_talk.subscribes[_usb_talk.subscribes_length].device_address = device_address;
     _usb_talk.subscribes[_usb_talk.subscribes_length].topic = topic;
     _usb_talk.subscribes[_usb_talk.subscribes_length].callback = callback;
     _usb_talk.subscribes[_usb_talk.subscribes_length].param = param;
@@ -309,14 +307,14 @@ static void _usb_talk_process_message(char *message, size_t length)
     for (size_t i = 0; i < _usb_talk.subscribes_length; i++)
     {
 
-        if ((*_usb_talk.subscribes[i].device_address == device_address) && (strncmp(_usb_talk.subscribes[i].topic, topic + 12, topic_length - 12) == 0))
+        if (strncmp(_usb_talk.subscribes[i].topic, topic + 12, topic_length - 12) == 0)
         {
             usb_talk_payload_t payload = {
                     message,
                     token_count - USB_TALK_TOKEN_PAYLOAD,
                     tokens + USB_TALK_TOKEN_PAYLOAD
             };
-            _usb_talk.subscribes[i].callback(&payload, _usb_talk.subscribes[i].param);
+            _usb_talk.subscribes[i].callback(&device_address, &payload, _usb_talk.subscribes[i].param);
         }
     }
 }

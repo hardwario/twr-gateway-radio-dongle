@@ -15,10 +15,10 @@ typedef struct
 
 } usb_talk_payload_t;
 
-typedef void (*usb_talk_sub_callback_t)(usb_talk_payload_t *payload, void *param);
+typedef void (*usb_talk_sub_callback_t)(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
 void usb_talk_init(void);
-void usb_talk_sub(uint64_t *device_address, const char *topic, usb_talk_sub_callback_t callback, void *param);
+void usb_talk_sub(const char *topic, usb_talk_sub_callback_t callback, void *param);
 void usb_talk_send_string(const char *buffer);
 void usb_talk_publish_led(uint64_t *device_address, bool *state);
 void usb_talk_publish_push_button(uint64_t *device_address, uint16_t *event_count);

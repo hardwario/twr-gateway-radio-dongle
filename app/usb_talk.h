@@ -44,7 +44,9 @@ bool usb_talk_payload_get_int(usb_talk_payload_t *payload, int *value);
 bool usb_talk_payload_get_key_int(usb_talk_payload_t *payload, const char *key, int *value);
 bool usb_talk_payload_get_string(usb_talk_payload_t *payload, char *buffer, size_t *length);
 bool usb_talk_payload_get_key_string(usb_talk_payload_t *payload, const char *key, char *buffer, size_t *length);
+bool usb_talk_payload_get_compound_buffer(usb_talk_payload_t *payload, uint8_t *buffer, size_t *length, int *count_sum);
 
 bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const char *string);
+uint8_t usb_talk_hex_to_u8(const char *hex);
 
 #endif /* _USB_TALK_H */

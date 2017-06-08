@@ -4,6 +4,8 @@
 #include <base64.h>
 #include <application.h>
 
+#define USB_TALK_MAX_TOKENS 100
+
 #define USB_TALK_TOKEN_ARRAY         0
 #define USB_TALK_TOKEN_TOPIC         1
 #define USB_TALK_TOKEN_PAYLOAD       2
@@ -33,6 +35,7 @@ static void _usb_talk_task(void *param);
 static void _usb_talk_process_character(char character);
 static void _usb_talk_process_message(char *message, size_t length);
 static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *value);
+static bool _usb_talk_token_get_string(const char *buffer, jsmntok_t *token, char *str, size_t *length);
 
 void usb_talk_init(void)
 {
@@ -270,11 +273,11 @@ static void _usb_talk_process_character(char character)
 static void _usb_talk_process_message(char *message, size_t length)
 {
     static jsmn_parser parser;
-    static jsmntok_t tokens[16];
+    static jsmntok_t tokens[USB_TALK_MAX_TOKENS];
 
     jsmn_init(&parser);
 
-    int token_count = jsmn_parse(&parser, (const char *) message, length, tokens, sizeof(tokens));
+    int token_count = jsmn_parse(&parser, (const char *) message, length, tokens, USB_TALK_MAX_TOKENS);
 
     if (token_count < 3)
     {
@@ -561,6 +564,64 @@ bool usb_talk_payload_get_key_string(usb_talk_payload_t *payload, const char *ke
     return false;
 }
 
+bool usb_talk_payload_get_compound_buffer(usb_talk_payload_t *payload, uint8_t *buffer, size_t *length, int *count_sum)
+{
+	if (payload->tokens[0].type != JSMN_ARRAY)
+	{
+		return false;
+	}
+
+	if (payload->tokens[0].size % 2 != 0)
+	{
+		return false;
+	}
+
+	int count;
+	char str[12];
+	size_t str_length;
+	size_t _length = 0;
+	int _count_sum = 0;
+
+	for (int i = 1; (i + 1 < payload->token_count) && (_length + 5 <= *length); i += 2)
+	{
+		if (!_usb_talk_token_get_int(payload->buffer, &payload->tokens[i], &count))
+		{
+			return false;
+		}
+
+		if (_count_sum < *count_sum)
+		{
+			_count_sum += count;
+			continue;
+		}
+
+		str_length = sizeof(str);
+
+		if (!_usb_talk_token_get_string(payload->buffer, &payload->tokens[i + 1], str, &str_length))
+		{
+			return false;
+		}
+
+		if (((str_length != 7) && (str_length != 11)) || (str[0] != '#'))
+		{
+			return false;
+		}
+
+		_count_sum += count;
+
+		*(buffer + _length++) = count;
+		*(buffer + _length++) = usb_talk_hex_to_u8(str + 1);
+		*(buffer + _length++) = usb_talk_hex_to_u8(str + 3);
+		*(buffer + _length++) = usb_talk_hex_to_u8(str + 5);
+		*(buffer + _length++) =  (str_length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
+	}
+
+	*length = _length;
+	*count_sum += _count_sum;
+
+	return true;
+}
+
 bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const char *string)
 {
     size_t token_length;
@@ -578,6 +639,13 @@ bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const 
     }
 
     return true;
+}
+
+uint8_t usb_talk_hex_to_u8(const char *hex)
+{
+	uint8_t high = (*hex <= '9') ? *hex - '0' : toupper(*hex) - 'A' + 10;
+	uint8_t low = (*(hex+1) <= '9') ? *(hex+1) - '0' : toupper(*(hex+1)) - 'A' + 10;
+    return (high << 4) | low;
 }
 
 static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *value)
@@ -617,4 +685,19 @@ static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *v
     return true;
 }
 
+static bool _usb_talk_token_get_string(const char *buffer, jsmntok_t *token, char *str, size_t *length)
+{
+    if (token->type != JSMN_STRING)
+    {
+        return false;
+    }
+    uint32_t token_length = token->end - token->start;
+    if (token_length > *length)
+    {
+        return false;
+    }
+    strncpy(str, &buffer[token->start], token_length);
+    *length = token_length;
+    return true;
+}
 

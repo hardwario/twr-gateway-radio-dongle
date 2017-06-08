@@ -34,6 +34,9 @@ static void relay_state_get(uint64_t *device_address, usb_talk_payload_t *payloa
 static void module_relay_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void module_relay_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
 void application_init(void)
 {
@@ -187,7 +190,9 @@ void application_init(void)
     usb_talk_sub("/relay/0:1/state/get", module_relay_state_get, &relay_0_1);
     usb_talk_sub("/lcd/-/text/set", lcd_text_set, NULL);
 
-
+    usb_talk_sub("/led-strip/-/color/set", led_strip_color_set, NULL);
+    usb_talk_sub("/led-strip/-/brightness/set", led_strip_brightness_set, NULL);
+    usb_talk_sub("/led-strip/-/compound/set", led_strip_compound_set, NULL);
 }
 
 void application_task(void)
@@ -593,3 +598,75 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
 
     bc_module_lcd_draw_string(x, y, text);
 }
+
+static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	uint8_t buffer[1 + sizeof(uint64_t) + 4];
+	buffer[0] = 0x10;
+	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+
+	char str[12];
+	size_t length = sizeof(str);
+	if (!usb_talk_payload_get_string(payload, str, &length))
+	{
+		return;
+	}
+
+	if (((length != 7) && (length != 11)) || (str[0] != '#'))
+	{
+		return;
+	}
+
+	buffer[sizeof(uint64_t) + 1] = usb_talk_hex_to_u8(str + 1);
+	buffer[sizeof(uint64_t) + 2] = usb_talk_hex_to_u8(str + 3);
+	buffer[sizeof(uint64_t) + 3] = usb_talk_hex_to_u8(str + 5);
+	buffer[sizeof(uint64_t) + 4] =  (length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
+
+	bc_radio_pub_buffer(buffer, sizeof(buffer));
+}
+
+static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	int value;
+	if (!usb_talk_payload_get_int(payload, &value))
+	{
+		return;
+	}
+
+	if ((value < 0) || value > 100)
+	{
+		return;
+	}
+
+	uint8_t buffer[1 + sizeof(uint64_t) + 1];
+	buffer[0] = 0x11;
+	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+	buffer[sizeof(uint64_t) + 1] = value;
+
+	bc_radio_pub_buffer(buffer, sizeof(buffer));
+}
+
+static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	uint8_t buffer[64 - 9];
+	buffer[0] = 0x12;
+	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+
+	int count_sum = 0;
+	size_t length;
+
+	do
+	{
+		length = sizeof(buffer) - sizeof(uint64_t) - 2;
+
+		buffer[sizeof(uint64_t) + 1] = count_sum;
+
+		usb_talk_payload_get_compound_buffer(payload, buffer + sizeof(uint64_t) + 2, &length, &count_sum);
+
+		bc_radio_pub_buffer(buffer, length + sizeof(uint64_t) + 2);
+
+	}while((length == 45) && (count_sum < 255));
+
+}
+
+

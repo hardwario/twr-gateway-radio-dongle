@@ -38,7 +38,11 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
 static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void radio_node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void radio_node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
+static void _radio_node(usb_talk_payload_t *payload, bool (* call)(uint64_t));
 static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state);
 static void _radio_pub_state_get(uint8_t type, uint64_t *device_address);
 
@@ -199,6 +203,13 @@ void application_init(void)
     usb_talk_sub("/led-strip/-/color/set", led_strip_color_set, NULL);
     usb_talk_sub("/led-strip/-/brightness/set", led_strip_brightness_set, NULL);
     usb_talk_sub("/led-strip/-/compound/set", led_strip_compound_set, NULL);
+
+//    usb_talk_sub("/radio/-/peer-device/add", led_strip_compound_set, NULL);
+
+    usb_talk_sub("/radio/-/nodes/get", radio_nodes_get, NULL);
+    usb_talk_sub("/radio/-/node/add", radio_node_add, NULL);
+    usb_talk_sub("/radio/-/node/remove", radio_node_remove, NULL);
+
 }
 
 void application_task(void)
@@ -244,8 +255,6 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
         bc_led_pulse(&led, 1000);
 
         usb_talk_publish_radio(&my_device_address, "attach", &peer_device_address);
-
-        bc_radio_enroll_to_gateway();
     }
     else if (event == BC_RADIO_EVENT_ATTACH_FAILURE)
     {
@@ -639,6 +648,7 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
 
 static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
+	(void) param;
 	uint8_t buffer[1 + sizeof(uint64_t) + 4];
 	buffer[0] = RADIO_LED_STRIP_COLOR_SET;
 	memcpy(buffer + 1, device_address, sizeof(uint64_t));
@@ -665,6 +675,7 @@ static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *pa
 
 static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
+	(void) param;
 	int value;
 	if (!usb_talk_payload_get_int(payload, &value))
 	{
@@ -686,6 +697,7 @@ static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_
 
 static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
+	(void) param;
 	uint8_t buffer[64 - 9];
 	buffer[0] = RADIO_LED_STRIP_COMPOUND_SET;
 	memcpy(buffer + 1, device_address, sizeof(uint64_t));
@@ -705,6 +717,67 @@ static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t 
 
 	}while((length == 45) && (count_sum < 255));
 
+}
+
+static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) param;
+    (void) payload;
+
+    if (my_device_address != *device_address)
+	{
+		return;
+	}
+
+    uint64_t address[BC_RADIO_MAX_DEVICES];
+
+    bc_radio_get_peer_devices_address(address, BC_RADIO_MAX_DEVICES);
+
+    usb_talk_publish_radio_nodes(&my_device_address, address, BC_RADIO_MAX_DEVICES);
+
+}
+
+static void radio_node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	(void) param;
+    if (my_device_address != *device_address)
+	{
+		return;
+	}
+
+    _radio_node(payload, bc_radio_peer_device_add);
+}
+
+static void radio_node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	(void) param;
+    if (my_device_address != *device_address)
+	{
+		return;
+	}
+
+    _radio_node(payload, bc_radio_peer_device_remove);
+}
+
+static void _radio_node(usb_talk_payload_t *payload, bool (* call)(uint64_t))
+{
+	char tmp[13];
+	size_t length = sizeof(tmp);
+
+	if (!usb_talk_payload_get_string(payload, tmp, &length))
+	{
+		return;
+	}
+
+	if (length == 12)
+	{
+		uint64_t device_address = 0;
+
+		if (sscanf(tmp, "%012llx/", &device_address))
+		{
+			call(device_address);
+		}
+	}
 }
 
 static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)

@@ -33,6 +33,7 @@ void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, bc
 void usb_talk_publish_led_strip_config(uint64_t *device_address, const char *mode, int *count);
 void usb_talk_publish_encoder(uint64_t *device_address, int *increment);
 void usb_talk_publish_radio(uint64_t *device_address, const char *event, uint64_t *peer_device_address);
+void usb_talk_publish_radio_nodes(uint64_t *device_address, uint64_t *peer_devices_address, int lenght);
 
 bool usb_talk_payload_get_bool(usb_talk_payload_t *payload, bool *value);
 bool usb_talk_payload_get_key_bool(usb_talk_payload_t *payload, const char *key, bool *value);

@@ -84,6 +84,14 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 40, "text": "BigClown", "font": 28}'
     ```
 
+#### Radio
+    Works, but it can change
+    ```
+    mosquitto_pub -t 'node/{id-gateway}/radio/-/nodes/get' -n
+    mosquitto_pub -t 'node/{id-gateway}/radio/-/node/add' -m '"836d1983184c"'
+    mosquitto_pub -t 'node/{id-gateway}/radio/-/node/remove' -m '"836d1983184c"'
+    ```
+
 ## License
 
 This project is licensed under the [MIT License](https://opensource.org/licenses/MIT/) - see the [LICENSE](LICENSE) file for details.

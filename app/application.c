@@ -26,7 +26,6 @@ static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_
 static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_event_t event, void *event_param);
 static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_barometer_event_t event, void *event_param);
 static void co2_event_handler(bc_module_co2_event_t event, void *event_param);
-static void encoder_event_handler(bc_module_encoder_event_t event, void *param);
 
 static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
@@ -177,11 +176,6 @@ void application_init(void)
     bc_module_co2_init();
     bc_module_co2_set_update_interval(30000);
     bc_module_co2_set_event_handler(co2_event_handler, NULL);
-
-    // ---------------------------
-
-    bc_module_encoder_init();
-    bc_module_encoder_set_event_handler(encoder_event_handler, NULL);
 
     //----------------------------
 
@@ -433,17 +427,6 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
         {
             usb_talk_publish_co2_concentation(&my_device_address, &value);
         }
-    }
-}
-
-static void encoder_event_handler(bc_module_encoder_event_t event, void *param)
-{
-    (void)param;
-
-    if (event == BC_MODULE_ENCODER_EVENT_ROTATION)
-    {
-        int increment = bc_module_encoder_get_increment();
-        usb_talk_publish_encoder(&my_device_address, &increment);
     }
 }
 

@@ -20,6 +20,7 @@ typedef void (*usb_talk_sub_callback_t)(uint64_t *device_address, usb_talk_paylo
 void usb_talk_init(void);
 void usb_talk_sub(const char *topic, usb_talk_sub_callback_t callback, void *param);
 void usb_talk_send_string(const char *buffer);
+void usb_talk_publish_event_count(uint64_t *device_address, const char *name, uint16_t *event_count);
 void usb_talk_publish_led(uint64_t *device_address, bool *state);
 void usb_talk_publish_push_button(uint64_t *device_address, uint16_t *event_count);
 void usb_talk_publish_thermometer(uint64_t *device_address, uint8_t *i2c, float *temperature);
@@ -34,6 +35,7 @@ void usb_talk_publish_led_strip_config(uint64_t *device_address, const char *mod
 void usb_talk_publish_encoder(uint64_t *device_address, int *increment);
 void usb_talk_publish_radio(uint64_t *device_address, const char *event, uint64_t *peer_device_address);
 void usb_talk_publish_radio_nodes(uint64_t *device_address, uint64_t *peer_devices_address, int lenght);
+void usb_talk_publish_flood_detector(uint64_t *device_address, const char *number, bool *state);
 
 bool usb_talk_payload_get_bool(usb_talk_payload_t *payload, bool *value);
 bool usb_talk_payload_get_key_bool(usb_talk_payload_t *payload, const char *key, bool *value);

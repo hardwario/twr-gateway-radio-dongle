@@ -62,6 +62,15 @@ void usb_talk_send_string(const char *buffer)
     bc_usb_cdc_write(buffer, strlen(buffer));
 }
 
+void usb_talk_publish_event_count(uint64_t *device_address, const char *name, uint16_t *event_count)
+{
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+             "[\"%012llx/%s/-/event-count\", %" PRIu16 "]\n",
+             *device_address, name, *event_count);
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
 void usb_talk_publish_led(uint64_t *device_address, bool *state)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
@@ -234,6 +243,15 @@ void usb_talk_publish_radio_nodes(uint64_t *device_address, uint64_t *peer_devic
 	strncpy(_usb_talk.tx_buffer + offset, "]]\n", sizeof(_usb_talk.tx_buffer) - offset);
 
 	usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
+void usb_talk_publish_flood_detector(uint64_t *device_address, const char *number, bool *state)
+{
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+             "[\"%012llx/flood-detector/%c/alarm\", %s]\n",
+             *device_address, *number, *state ? "true" : "false");
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
 static void _usb_talk_task(void *param)

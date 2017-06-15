@@ -26,6 +26,7 @@ static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_
 static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_event_t event, void *event_param);
 static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_barometer_event_t event, void *event_param);
 static void co2_event_handler(bc_module_co2_event_t event, void *event_param);
+static void pir_event_handler(bc_module_pir_t *self, bc_module_pir_event_t event, void*event_param);
 
 static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
@@ -182,6 +183,12 @@ void application_init(void)
     bc_module_relay_init(&relay_0_0, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
     bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
 
+    //----------------------------
+
+    static bc_module_pir_t pir;
+	bc_module_pir_init(&pir);
+	bc_module_pir_set_event_handler(&pir, pir_event_handler, NULL);
+
     usb_talk_sub("/led/-/state/set", led_state_set, NULL);
     usb_talk_sub("/led/-/state/get", led_state_get, NULL);
     usb_talk_sub("/relay/-/state/set", relay_state_set, NULL);
@@ -311,41 +318,60 @@ void bc_radio_on_co2(uint64_t *peer_device_address, float *concentration)
 
 void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *length)
 {
-    if (*length != 2)
+    if (*length == 2)
     {
-        return;
+    	switch (buffer[0]) {
+    			case RADIO_LED:
+			{
+				bool state = buffer[1];
+				usb_talk_publish_led(peer_device_address, &state);
+				break;
+			}
+			case RADIO_RELAY_0:
+			{
+				uint8_t number = 0;
+				bc_module_relay_state_t state = buffer[1];
+				usb_talk_publish_module_relay(peer_device_address, &number, &state);
+				break;
+			}
+			case RADIO_RELAY_1:
+			{
+				uint8_t number = 1;
+				bc_module_relay_state_t state = buffer[1];
+				usb_talk_publish_module_relay(peer_device_address, &number, &state);
+				break;
+			}
+
+			case RADIO_RELAY_POWER:
+			{
+				bool state = buffer[1];
+				usb_talk_publish_relay(peer_device_address, &state);
+				break;
+			}
+			default:
+				break;
+		}
+    }
+    else if (*length == 3)
+    {
+    	switch (buffer[0]) {
+			case RADIO_PIR:
+			{
+				uint16_t event_count;
+				memcpy(&event_count, buffer +1 , sizeof(event_count));
+				usb_talk_publish_event_count(peer_device_address, "pir", &event_count);
+				break;
+			}
+			case RADIO_FLOOD_DETECTOR:
+			{
+				usb_talk_publish_flood_detector(peer_device_address, (char *)(buffer + 1), (bool *)(buffer + 2));
+				break;
+			}
+    	default:
+			break;
+    	}
     }
 
-    switch (buffer[0]) {
-		case RADIO_LED:
-		{
-			bool state = buffer[1];
-			usb_talk_publish_led(peer_device_address, &state);
-			break;
-		}
-		case RADIO_RELAY_0:
-		{
-			uint8_t number = 0;
-			bc_module_relay_state_t state = buffer[1];
-			usb_talk_publish_module_relay(peer_device_address, &number, &state);
-			break;
-		}
-		case RADIO_RELAY_1:
-		{
-			uint8_t number = 1;
-			bc_module_relay_state_t state = buffer[1];
-			usb_talk_publish_module_relay(peer_device_address, &number, &state);
-			break;
-		}
-		case RADIO_RELAY_POWER:
-		{
-			bool state = buffer[1];
-			usb_talk_publish_relay(peer_device_address, &state);
-			break;
-		}
-		default:
-			break;
-	}
 }
 
 static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param)
@@ -428,6 +454,19 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
             usb_talk_publish_co2_concentation(&my_device_address, &value);
         }
     }
+}
+
+static void pir_event_handler(bc_module_pir_t *self, bc_module_pir_event_t event, void*event_param)
+{
+	(void) self;
+	(void) event_param;
+
+	if (event == BC_MODULE_PIR_EVENT_MOTION)
+	{
+		static uint16_t event_count = 0;
+		event_count++;
+		usb_talk_publish_event_count(&my_device_address, "pir", &event_count);
+	}
 }
 
 static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)

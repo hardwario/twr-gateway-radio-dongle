@@ -323,7 +323,7 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
     if (*length == 2)
     {
     	switch (buffer[0]) {
-    			case RADIO_LED:
+            case RADIO_LED:
 			{
 				bool state = buffer[1];
 				usb_talk_publish_led(peer_device_address, &state);
@@ -343,7 +343,6 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 				usb_talk_publish_module_relay(peer_device_address, &number, &state);
 				break;
 			}
-
 			case RADIO_RELAY_POWER:
 			{
 				bool state = buffer[1];
@@ -351,7 +350,9 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 				break;
 			}
 			default:
+            {
 				break;
+            }
 		}
     }
     else if (*length == 3)
@@ -369,8 +370,10 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 				usb_talk_publish_flood_detector(peer_device_address, (char *)(buffer + 1), (bool *)(buffer + 2));
 				break;
 			}
-    	default:
-			break;
+            default:
+            {
+			    break;
+            }
     	}
     }
 
@@ -676,11 +679,10 @@ static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *paylo
 
     bool state;
 
-    if (!usb_talk_payload_get_bool(payload, &state))
+    if (!usb_talk_payload_get_bool(payload, &state) || !state)
     {
         return;
     }
-    if (!state) return;
     
     if (my_device_address != *device_address)
 	{
@@ -759,7 +761,7 @@ static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t 
 
 		bc_radio_pub_buffer(buffer, length + sizeof(uint64_t) + 2);
 
-	}while((length == 45) && (count_sum < 255));
+	} while ((length == 45) && (count_sum < 255));
 
 }
 

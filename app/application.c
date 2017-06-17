@@ -35,6 +35,7 @@ static void relay_state_get(uint64_t *device_address, usb_talk_payload_t *payloa
 static void module_relay_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void module_relay_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
@@ -200,6 +201,7 @@ void application_init(void)
     usb_talk_sub("/relay/0:1/state/set", module_relay_state_set, &relay_1_number);
     usb_talk_sub("/relay/0:1/state/get", module_relay_state_get, &relay_1_number);
     usb_talk_sub("/lcd/-/text/set", lcd_text_set, NULL);
+    usb_talk_sub("/lcd/-/screen/clear", lcd_screen_clear, NULL);
 
     usb_talk_sub("/led-strip/-/color/set", led_strip_color_set, NULL);
     usb_talk_sub("/led-strip/-/brightness/set", led_strip_brightness_set, NULL);
@@ -666,6 +668,26 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
     }
 
     bc_module_lcd_draw_string(x, y, text);
+}
+
+static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) param;
+
+    bool state;
+
+    if (!usb_talk_payload_get_bool(payload, &state))
+    {
+        return;
+    }
+    if (!state) return;
+    
+    if (my_device_address != *device_address)
+	{
+		return;
+	}
+
+    bc_module_lcd_clear();
 }
 
 static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)

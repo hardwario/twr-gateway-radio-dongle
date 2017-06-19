@@ -80,11 +80,11 @@ void usb_talk_publish_led(uint64_t *device_address, bool *state)
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_push_button(uint64_t *device_address, uint16_t *event_count)
+void usb_talk_publish_push_button(uint64_t *device_address, const char *name, uint16_t *event_count)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-             "[\"%012llx/push-button/-/event-count\", %" PRIu16 "]\n",
-             *device_address, *event_count);
+             "[\"%012llx/push-button/%s/event-count\", %" PRIu16 "]\n",
+             *device_address, name, *event_count);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }

@@ -20,6 +20,7 @@ static bc_module_relay_t relay_0_0;
 static bc_module_relay_t relay_0_1;
 
 static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
+static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
 static void radio_event_handler(bc_radio_event_t event, void *event_param);
 static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param);
 static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_event_t event, void *event_param);
@@ -63,6 +64,14 @@ void application_init(void)
     static bc_button_t button;
     bc_button_init(&button, BC_GPIO_BUTTON, BC_GPIO_PULL_DOWN, false);
     bc_button_set_event_handler(&button, button_event_handler, NULL);
+
+    static bc_button_t lcd_left;
+    bc_button_init_virtual(&lcd_left, BC_MODULE_LCD_BUTTON_LEFT, bc_module_lcd_get_button_driver(), false);
+    bc_button_set_event_handler(&lcd_left, lcd_button_event_handler, NULL);
+
+    static bc_button_t lcd_right;
+    bc_button_init_virtual(&lcd_right, BC_MODULE_LCD_BUTTON_RIGHT, bc_module_lcd_get_button_driver(), false);
+    bc_button_set_event_handler(&lcd_right, lcd_button_event_handler, NULL);
 
     // Initialize radio
     bc_radio_init();
@@ -205,8 +214,6 @@ void application_init(void)
     usb_talk_sub("/led-strip/-/brightness/set", led_strip_brightness_set, NULL);
     usb_talk_sub("/led-strip/-/compound/set", led_strip_compound_set, NULL);
 
-//    usb_talk_sub("/radio/-/peer-device/add", led_strip_compound_set, NULL);
-
     usb_talk_sub("/radio/-/nodes/get", radio_nodes_get, NULL);
     usb_talk_sub("/radio/-/node/add", radio_node_add, NULL);
     usb_talk_sub("/radio/-/node/remove", radio_node_remove, NULL);
@@ -233,7 +240,7 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
     if (event == BC_BUTTON_EVENT_PRESS)
     {
         static uint16_t event_count = 0;
-        usb_talk_publish_push_button(&my_device_address, &event_count);
+        usb_talk_publish_push_button(&my_device_address, "-", &event_count);
         event_count++;
     }
     else if (event == BC_BUTTON_EVENT_HOLD)
@@ -241,6 +248,29 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
         bc_radio_enrollment_start();
         bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
     }
+}
+
+static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
+{
+    (void) event_param;
+
+	if (event != BC_BUTTON_EVENT_CLICK)
+	{
+		return;
+	}
+
+	if (self->_channel.virtual_channel == BC_MODULE_LCD_BUTTON_LEFT)
+	{
+		static uint16_t event_left_count = 0;
+		usb_talk_publish_push_button(&my_device_address, "lcd:left", &event_left_count);
+		event_left_count ++;
+	}
+	else
+	{
+		static uint16_t event_right_count = 0;
+		usb_talk_publish_push_button(&my_device_address, "lcd:right", &event_right_count);
+		event_right_count++;
+	}
 }
 
 static void radio_event_handler(bc_radio_event_t event, void *event_param)
@@ -277,7 +307,7 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
 
 void bc_radio_on_push_button(uint64_t *peer_device_address, uint16_t *event_count)
 {
-    usb_talk_publish_push_button(peer_device_address, event_count);
+    usb_talk_publish_push_button(peer_device_address, "-", event_count);
 }
 
 void bc_radio_on_thermometer(uint64_t *peer_device_address, uint8_t *i2c, float *temperature)
@@ -365,6 +395,20 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 			case RADIO_FLOOD_DETECTOR:
 			{
 				usb_talk_publish_flood_detector(peer_device_address, (char *)(buffer + 1), (bool *)(buffer + 2));
+				break;
+			}
+			case RADIO_LCD_BUTTON_LEFT:
+			{
+				uint16_t event_count;
+				memcpy(&event_count, buffer +1 , sizeof(event_count));
+				usb_talk_publish_push_button(peer_device_address, "lcd:left", &event_count);
+				break;
+			}
+			case RADIO_LCD_BUTTON_RIGHT:
+			{
+				uint16_t event_count;
+				memcpy(&event_count, buffer +1 , sizeof(event_count));
+				usb_talk_publish_push_button(peer_device_address, "lcd:right", &event_count);
 				break;
 			}
     	default:

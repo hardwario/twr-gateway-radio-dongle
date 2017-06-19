@@ -62,6 +62,15 @@ void usb_talk_send_string(const char *buffer)
     bc_usb_cdc_write(buffer, strlen(buffer));
 }
 
+void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, float *value)
+{
+	snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+				"[\"%012llx/%s\", %0.2f]\n",
+				*device_address, subtopics, *value);
+
+	usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
 void usb_talk_publish_event_count(uint64_t *device_address, const char *name, uint16_t *event_count)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
@@ -109,14 +118,17 @@ void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *i2c, fl
     switch((*i2c & ~0x80))
     {
         case 0x5f:
-            number = 0;
+            number = 0; // R1
             break;
         case 0x40:
-            number = 2;
+            number = 2; // R2 default
             break;
         case 0x41:
-            number = 3;
+            number = 3; // R2 alternate
             break;
+        case 0x40 | 0x0f:
+			number = 4; // R3 default
+			break;
         default:
             number = 0;
     }

@@ -106,6 +106,12 @@ void application_init(void)
 
     //----------------------------
 
+	static bc_tag_humidity_t humidity_tag_r3_0_40;
+	bc_tag_humidity_init(&humidity_tag_r3_0_40, BC_TAG_HUMIDITY_REVISION_R3, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
+	bc_tag_humidity_set_update_interval(&humidity_tag_r3_0_40, UPDATE_INTERVAL);
+	static uint8_t humidity_tag_r3_0_40_i2c = (BC_I2C_I2C0 << 7) | 0x40 | 0x0f; // 0x0f - hack
+	bc_tag_humidity_set_event_handler(&humidity_tag_r3_0_40, humidity_tag_event_handler, &humidity_tag_r3_0_40_i2c);
+
     static bc_tag_humidity_t humidity_tag_r2_0_40;
     bc_tag_humidity_init(&humidity_tag_r2_0_40, BC_TAG_HUMIDITY_REVISION_R2, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
     bc_tag_humidity_set_update_interval(&humidity_tag_r2_0_40, UPDATE_INTERVAL);
@@ -123,6 +129,12 @@ void application_init(void)
     bc_tag_humidity_set_update_interval(&humidity_tag_r1_0_5f, UPDATE_INTERVAL);
     static uint8_t humidity_tag_r1_0_5f_i2c = (BC_I2C_I2C0 << 7) | 0x5f;
     bc_tag_humidity_set_event_handler(&humidity_tag_r1_0_5f, humidity_tag_event_handler, &humidity_tag_r1_0_5f_i2c);
+
+    static bc_tag_humidity_t humidity_tag_r3_1_40;
+    bc_tag_humidity_init(&humidity_tag_r3_1_40, BC_TAG_HUMIDITY_REVISION_R3, BC_I2C_I2C1, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
+    bc_tag_humidity_set_update_interval(&humidity_tag_r3_1_40, UPDATE_INTERVAL);
+    static uint8_t humidity_tag_r3_1_40_i2c = (BC_I2C_I2C1 << 7) | 0x40 | 0x0f; // 0x0f - hack
+    bc_tag_humidity_set_event_handler(&humidity_tag_r3_1_40, humidity_tag_event_handler, &humidity_tag_r3_1_40_i2c);
 
     static bc_tag_humidity_t humidity_tag_r2_1_40;
     bc_tag_humidity_init(&humidity_tag_r2_1_40, BC_TAG_HUMIDITY_REVISION_R2, BC_I2C_I2C1, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
@@ -391,7 +403,7 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 			case RADIO_PIR:
 			{
 				uint16_t event_count;
-				memcpy(&event_count, buffer +1 , sizeof(event_count));
+				memcpy(&event_count, buffer + 1 , sizeof(event_count));
 				usb_talk_publish_event_count(peer_device_address, "pir", &event_count);
 				break;
 			}
@@ -403,14 +415,14 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 			case RADIO_LCD_BUTTON_LEFT:
 			{
 				uint16_t event_count;
-				memcpy(&event_count, buffer +1 , sizeof(event_count));
+				memcpy(&event_count, buffer + 1 , sizeof(event_count));
 				usb_talk_publish_push_button(peer_device_address, "lcd:left", &event_count);
 				break;
 			}
 			case RADIO_LCD_BUTTON_RIGHT:
 			{
 				uint16_t event_count;
-				memcpy(&event_count, buffer +1 , sizeof(event_count));
+				memcpy(&event_count, buffer + 1 , sizeof(event_count));
 				usb_talk_publish_push_button(peer_device_address, "lcd:right", &event_count);
 				break;
 			}
@@ -418,6 +430,23 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
             {
 			    break;
             }
+    	}
+    }
+    else if (*length == 5)
+    {
+    	switch (buffer[0]) {
+			case RADIO_THERMOSTAT_SET_POINT_TEMPERATURE:
+			{
+				float temperature;
+				memcpy(&temperature, buffer + 1 , sizeof(temperature));
+				usb_talk_publish_float(peer_device_address, "thermostat/set-point/temperature", &temperature);
+				break;
+			}
+			default:
+			{
+				break;
+			}
+
     	}
     }
 

@@ -31,6 +31,10 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     ```
     mosquitto_pub -t "node/{id}/led/-/state/set" -m false
     ```
+  * Get state
+    ```
+    mosquitto_pub -t "node/{id}/led/-/state/get" -n
+    ```
 
 #### Relay on Power module
   * On
@@ -44,6 +48,10 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     ```
     mosquitto_pub -t 'node/{id}/relay/-/state/set' -m false
     ```
+  * Get state
+    ```
+    mosquitto_pub -t 'node/{id}/relay/-/state/get' -n
+    ```
 
 #### Relay module
 
@@ -56,6 +64,11 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     ```
     mosquitto_pub -t "node/{id}/relay/0:0/state/set" -m false
     mosquitto_pub -t "node/{id}/relay/0:1/state/set" -m false
+    ```
+  * Get state
+    ```
+    mosquitto_pub -t "node/{id}/relay/0:0/state/get" -n
+    mosquitto_pub -t "node/{id}/relay/0:1/state/get" -n
     ```
 
 #### Led Strip on Power module

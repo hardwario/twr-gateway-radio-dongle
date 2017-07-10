@@ -426,6 +426,13 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 				usb_talk_publish_push_button(peer_device_address, "lcd:right", &event_count);
 				break;
 			}
+			case RADIO_ACCELEROMETER:
+			{
+				uint16_t event_count;
+				memcpy(&event_count, buffer + 1 , sizeof(event_count));
+				usb_talk_publish_push_button(peer_device_address, "accelerometer", &event_count);
+				break;
+			}
     	    default:
             {
 			    break;

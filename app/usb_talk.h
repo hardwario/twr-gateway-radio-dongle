@@ -37,6 +37,7 @@ void usb_talk_publish_encoder(uint64_t *device_address, int *increment);
 void usb_talk_publish_radio(uint64_t *device_address, const char *event, uint64_t *peer_device_address);
 void usb_talk_publish_radio_nodes(uint64_t *device_address, uint64_t *peer_devices_address, int lenght);
 void usb_talk_publish_flood_detector(uint64_t *device_address, const char *number, bool *state);
+void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float *x_axis, float *y_axis, float *z_axis);
 
 bool usb_talk_payload_get_bool(usb_talk_payload_t *payload, bool *value);
 bool usb_talk_payload_get_key_bool(usb_talk_payload_t *payload, const char *key, bool *value);
@@ -46,6 +47,8 @@ bool usb_talk_payload_get_enum(usb_talk_payload_t *payload, int *value, ...);
 bool usb_talk_payload_get_key_enum(usb_talk_payload_t *payload, const char *key, int *value, ...);
 bool usb_talk_payload_get_int(usb_talk_payload_t *payload, int *value);
 bool usb_talk_payload_get_key_int(usb_talk_payload_t *payload, const char *key, int *value);
+bool usb_talk_payload_get_float(usb_talk_payload_t *payload, float *value);
+bool usb_talk_payload_get_key_float(usb_talk_payload_t *payload, const char *key, float *value);
 bool usb_talk_payload_get_string(usb_talk_payload_t *payload, char *buffer, size_t *length);
 bool usb_talk_payload_get_key_string(usb_talk_payload_t *payload, const char *key, char *buffer, size_t *length);
 bool usb_talk_payload_get_compound_buffer(usb_talk_payload_t *payload, uint8_t *buffer, size_t *length, int *count_sum);

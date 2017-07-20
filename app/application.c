@@ -41,6 +41,7 @@ static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *pa
 static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void radio_node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void radio_node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
@@ -229,6 +230,7 @@ void application_init(void)
     usb_talk_sub("/led-strip/-/brightness/set", led_strip_brightness_set, NULL);
     usb_talk_sub("/led-strip/-/compound/set", led_strip_compound_set, NULL);
     usb_talk_sub("/led-strip/-/effect/set", led_strip_effect_set, NULL);
+    usb_talk_sub("/led-strip/-/thermometer/set", led_strip_thermometer_set, NULL);
 
     usb_talk_sub("/radio/-/nodes/get", radio_nodes_get, NULL);
     usb_talk_sub("/radio/-/node/add", radio_node_add, NULL);
@@ -428,7 +430,7 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 				usb_talk_publish_push_button(peer_device_address, "lcd:right", &event_count);
 				break;
 			}
-			case RADIO_ACCELEROMETER:
+			case RADIO_ACCELEROMETER_ALERT:
 			{
 				uint16_t event_count;
 				memcpy(&event_count, buffer + 1 , sizeof(event_count));
@@ -457,6 +459,25 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 			}
 
     	}
+    }
+    else if (*length == 13)
+    {
+        switch (buffer[0]) {
+        case RADIO_ACCELEROMETER_ACCELERATION:
+        {
+            float x_axis, y_axis, z_axis;
+            memcpy(&x_axis, buffer + 1, sizeof(x_axis));
+            memcpy(&y_axis, buffer + 1 + sizeof(x_axis), sizeof(y_axis));
+            memcpy(&z_axis, buffer + 1 + sizeof(x_axis) + sizeof(y_axis), sizeof(z_axis));
+            usb_talk_publish_accelerometer_acceleration(peer_device_address, &x_axis, &y_axis, &z_axis);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+
+    }
     }
 
 }
@@ -849,7 +870,7 @@ static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t 
 
 static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-
+	(void) param;
 	uint8_t buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + sizeof(uint32_t)];
 	int type;
 	int int_wait;
@@ -901,6 +922,42 @@ static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *p
 		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 1] = usb_talk_hex_to_u8(str + 5);
 		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 0] = (length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
 	}
+
+	bc_radio_pub_buffer(buffer, sizeof(buffer));
+}
+
+static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	(void) param;
+
+	float temperature;
+	int min;
+	int max;
+	uint8_t buffer[1 + sizeof(uint64_t) + sizeof(float) + 1 + 1];
+
+	if (!usb_talk_payload_get_key_float(payload, "temperature", &temperature))
+	{
+		return;
+	}
+
+	if (!usb_talk_payload_get_key_int(payload, "min", &min) || (min > 127) || (min < -128))
+	{
+		return;
+	}
+
+
+	if (!usb_talk_payload_get_key_int(payload, "max", &max) || (max > 127) || (max < -128))
+	{
+		return;
+	}
+
+	buffer[0] = RADIO_LED_STRIP_THERMOMETER_SET;
+	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+
+	memcpy(buffer + 1 + sizeof(uint64_t), &temperature, sizeof(temperature));
+
+	buffer[1 + sizeof(uint64_t) + sizeof(uint32_t)] = (int8_t) min;
+	buffer[1 + sizeof(uint64_t) + sizeof(uint32_t) + 1] = (int8_t) max;
 
 	bc_radio_pub_buffer(buffer, sizeof(buffer));
 }

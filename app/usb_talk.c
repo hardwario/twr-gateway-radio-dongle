@@ -35,6 +35,7 @@ static void _usb_talk_task(void *param);
 static void _usb_talk_process_character(char character);
 static void _usb_talk_process_message(char *message, size_t length);
 static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *value);
+static bool _usb_talk_token_get_float(const char *buffer, jsmntok_t *token, float *value);
 static bool _usb_talk_token_get_string(const char *buffer, jsmntok_t *token, char *str, size_t *length);
 
 void usb_talk_init(void)
@@ -282,6 +283,16 @@ void usb_talk_publish_flood_detector(uint64_t *device_address, const char *numbe
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
+
+void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float *x_axis, float *y_axis, float *z_axis)
+{
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+            "[\"%012llx/accelerometer/-/acceleration\", [%0.2f,%0.2f,%0.2f]]\n",
+            *device_address, *x_axis, *y_axis, *z_axis);
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
 
 static void _usb_talk_task(void *param)
 {
@@ -590,6 +601,23 @@ bool usb_talk_payload_get_key_int(usb_talk_payload_t *payload, const char *key, 
     return false;
 }
 
+bool usb_talk_payload_get_float(usb_talk_payload_t *payload, float *value)
+{
+    return _usb_talk_token_get_float(payload->buffer, &payload->tokens[0], value);
+}
+
+bool usb_talk_payload_get_key_float(usb_talk_payload_t *payload, const char *key, float *value)
+{
+    for (int i = 1; i + 1 < payload->token_count; i += 2)
+    {
+        if (usb_talk_is_string_token_equal(payload->buffer, &payload->tokens[i], key))
+        {
+            return _usb_talk_token_get_float(payload->buffer, &payload->tokens[i + 1], value);
+        }
+    }
+    return false;
+}
+
 bool usb_talk_payload_get_string(usb_talk_payload_t *payload, char *buffer, size_t *length)
 {
     if (payload->tokens[0].type != JSMN_STRING)
@@ -724,7 +752,7 @@ static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *v
 
     char str[10 + 1];
 
-    if (length > sizeof(str))
+    if (length >= sizeof(str))
     {
         return false;
     }
@@ -746,6 +774,31 @@ static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *v
     {
         *value = (int) strtol(str, NULL, 10);
     }
+
+    return true;
+}
+
+static bool _usb_talk_token_get_float(const char *buffer, jsmntok_t *token, float *value)
+{
+    if (token->type != JSMN_PRIMITIVE)
+    {
+        return false;
+    }
+
+    size_t length = (size_t) (token->end - token->start);
+
+    char str[10 + 1];
+
+    if (length >= sizeof(str))
+    {
+        return false;
+    }
+
+    memset(str, 0, sizeof(str));
+
+    strncpy(str, buffer + token->start, length);
+
+    *value = strtof(str, NULL);
 
     return true;
 }

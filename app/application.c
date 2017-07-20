@@ -40,6 +40,7 @@ static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *paylo
 static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void radio_node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void radio_node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
@@ -227,6 +228,7 @@ void application_init(void)
     usb_talk_sub("/led-strip/-/color/set", led_strip_color_set, NULL);
     usb_talk_sub("/led-strip/-/brightness/set", led_strip_brightness_set, NULL);
     usb_talk_sub("/led-strip/-/compound/set", led_strip_compound_set, NULL);
+    usb_talk_sub("/led-strip/-/effect/set", led_strip_effect_set, NULL);
 
     usb_talk_sub("/radio/-/nodes/get", radio_nodes_get, NULL);
     usb_talk_sub("/radio/-/node/add", radio_node_add, NULL);
@@ -430,7 +432,7 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 			{
 				uint16_t event_count;
 				memcpy(&event_count, buffer + 1 , sizeof(event_count));
-				usb_talk_publish_push_button(peer_device_address, "accelerometer", &event_count);
+				usb_talk_publish_event_count(peer_device_address, "accelerometer", &event_count);
 				break;
 			}
     	    default:
@@ -843,6 +845,64 @@ static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t 
 
 	} while ((length == 45) && (count_sum < 255));
 
+}
+
+static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+
+	uint8_t buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + sizeof(uint32_t)];
+	int type;
+	int int_wait;
+	uint16_t wait;
+
+	buffer[0] = RADIO_LED_STRIP_EFFECT_SET;
+	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+
+	if (!usb_talk_payload_get_key_enum(payload, "type", &type, "test", "rainbow", "rainbow-cycle", "theater-chase-rainbow", "color-wipe", "theater-chase"))
+	{
+		return;
+	}
+
+	buffer[1 + sizeof(uint64_t)] = (uint8_t)type;
+
+	if (type > RADIO_LED_STRIP_EFFECT_TYPE_TEST)
+	{
+		if (!usb_talk_payload_get_key_int(payload, "wait", &int_wait))
+		{
+			return;
+		}
+
+		if (int_wait < 0)
+		{
+			return;
+		}
+
+		wait = (uint16_t)int_wait;
+
+		memcpy(buffer + 1 + sizeof(uint64_t) + 1, &wait, sizeof(wait));
+	}
+
+	if (type > RADIO_LED_STRIP_EFFECT_TYPE_THEATER_CHASE_RAINBOW)
+	{
+		char str[12];
+		size_t length = sizeof(str);
+		if (!usb_talk_payload_get_key_string(payload, "color", str, &length))
+		{
+			return;
+		}
+
+		if (((length != 7) && (length != 11)) || (str[0] != '#'))
+		{
+			return;
+		}
+
+		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 3] = usb_talk_hex_to_u8(str + 1);
+		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 2] = usb_talk_hex_to_u8(str + 3);
+		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 1] = usb_talk_hex_to_u8(str + 5);
+		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 0] = (length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
+	}
+
+	bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
 static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)

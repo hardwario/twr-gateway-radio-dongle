@@ -100,12 +100,29 @@ void usb_talk_publish_push_button(uint64_t *device_address, const char *name, ui
 
 void usb_talk_publish_thermometer(uint64_t *device_address, uint8_t *i2c, float *temperature)
 {
-
     uint8_t number = (*i2c & ~0x80) == BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT ? 0 : 1;
 
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+    if((*i2c & ~0x80) == 0x00)
+    {
+        if((*i2c & 0x80) == 0)
+        {
+            snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                    "[\"%012llx/thermometer/a/temperature\", %0.2f]\n",
+                    *device_address, *temperature);
+        }
+        else
+        {
+            snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                    "[\"%012llx/thermometer/b/temperature\", %0.2f]\n",
+                    *device_address, *temperature);
+        }
+    }
+    else
+    {
+        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/thermometer/%d:%d/temperature\", %0.2f]\n",
                 *device_address, ((*i2c & 0x80) >> 7), number, *temperature);
+    }
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
@@ -509,7 +526,7 @@ bool usb_talk_payload_get_enum(usb_talk_payload_t *payload, int *value, ...)
 
 bool usb_talk_payload_get_key_enum(usb_talk_payload_t *payload, const char *key, int *value, ...)
 {
-    char temp[11];
+    char temp[32];
     char *str;
     int j = 0;
 

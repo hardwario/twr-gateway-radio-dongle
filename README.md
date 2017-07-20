@@ -87,6 +87,36 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     ```
     mosquitto_pub -t 'node/{id}/led-strip/-/compound/set' -m '[20, "#ff0000", 20, "#ff7f00", 20, "#ffff00", 20, "#00ff00", 20, "#0000ff", 20, "#960082", 24, "#D500ff"]'
     ```
+  * Effects
+    * Test
+      ```
+      mosquitto_pub -t 'node/{id}/led-strip/-/effect/set' -m '{"type":"test"}'
+      ```
+    * Rainbow
+      ```
+      mosquitto_pub -t 'node/{id}/led-strip/-/effect/set' -m '{"type":"rainbow", "wait":50}'
+      ```
+    * Rainbow cycle
+      ```
+      mosquitto_pub -t 'node/{id}/led-strip/-/effect/set' -m '{"type":"rainbow-cycle", "wait":50}'
+      ```
+    * Theater chase rainbow
+      ```
+      mosquitto_pub -t 'node/{id}/led-strip/-/effect/set' -m '{"type":"theater-chase-rainbow", "wait":50}'
+      ```
+    * Color wipe
+      ```
+      mosquitto_pub -t 'node/{id}/led-strip/-/effect/set' -m '{"type":"color-wipe", "wait":50, "color":"#800000"}'
+      ```
+    * Theater chase
+      ```
+      mosquitto_pub -t 'node/{id}/led-strip/-/effect/set' -m '{"type":"theater-chase", "wait":50, "color":"#008000"}'
+      ```
+  * Thermometer effect
+    ```
+    mosquitto_pub -t 'node/{id}/led-strip/-/thermometer/set' -m '{"temperature": 22.5, "min":-20, "max": 50}'
+    ```
+
 
 #### LCD module
   Beware, it works only usb-gateway

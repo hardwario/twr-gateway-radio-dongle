@@ -10,7 +10,8 @@ static uint64_t my_device_address;
 static bc_led_t led;
 static bool led_state;
 
-static struct {
+static struct
+{
     bc_tick_t next_update;
     bool mqtt;
 
@@ -46,7 +47,7 @@ static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payloa
 static void radio_node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void radio_node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
-static void _radio_node(usb_talk_payload_t *payload, bool (* call)(uint64_t));
+static void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t));
 static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state);
 static void _radio_pub_state_get(uint8_t type, uint64_t *device_address);
 
@@ -98,21 +99,21 @@ void application_init(void)
     bc_tag_temperature_init(&temperature_tag_1_48, BC_I2C_I2C1, BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT);
     bc_tag_temperature_set_update_interval(&temperature_tag_1_48, UPDATE_INTERVAL);
     static uint8_t temperature_tag_1_48_i2c = (BC_I2C_I2C1 << 7) | BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT;
-    bc_tag_temperature_set_event_handler(&temperature_tag_1_48, temperature_tag_event_handler,&temperature_tag_1_48_i2c);
+    bc_tag_temperature_set_event_handler(&temperature_tag_1_48, temperature_tag_event_handler, &temperature_tag_1_48_i2c);
 
     static bc_tag_temperature_t temperature_tag_1_49;
     bc_tag_temperature_init(&temperature_tag_1_49, BC_I2C_I2C1, BC_TAG_TEMPERATURE_I2C_ADDRESS_ALTERNATE);
     bc_tag_temperature_set_update_interval(&temperature_tag_1_49, UPDATE_INTERVAL);
     static uint8_t temperature_tag_1_49_i2c = (BC_I2C_I2C1 << 7) | BC_TAG_TEMPERATURE_I2C_ADDRESS_ALTERNATE;
-    bc_tag_temperature_set_event_handler(&temperature_tag_1_49, temperature_tag_event_handler,&temperature_tag_1_49_i2c);
+    bc_tag_temperature_set_event_handler(&temperature_tag_1_49, temperature_tag_event_handler, &temperature_tag_1_49_i2c);
 
     //----------------------------
 
-	static bc_tag_humidity_t humidity_tag_r3_0_40;
-	bc_tag_humidity_init(&humidity_tag_r3_0_40, BC_TAG_HUMIDITY_REVISION_R3, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
-	bc_tag_humidity_set_update_interval(&humidity_tag_r3_0_40, UPDATE_INTERVAL);
-	static uint8_t humidity_tag_r3_0_40_i2c = (BC_I2C_I2C0 << 7) | 0x40 | 0x0f; // 0x0f - hack
-	bc_tag_humidity_set_event_handler(&humidity_tag_r3_0_40, humidity_tag_event_handler, &humidity_tag_r3_0_40_i2c);
+    static bc_tag_humidity_t humidity_tag_r3_0_40;
+    bc_tag_humidity_init(&humidity_tag_r3_0_40, BC_TAG_HUMIDITY_REVISION_R3, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
+    bc_tag_humidity_set_update_interval(&humidity_tag_r3_0_40, UPDATE_INTERVAL);
+    static uint8_t humidity_tag_r3_0_40_i2c = (BC_I2C_I2C0 << 7) | 0x40 | 0x0f; // 0x0f - hack
+    bc_tag_humidity_set_event_handler(&humidity_tag_r3_0_40, humidity_tag_event_handler, &humidity_tag_r3_0_40_i2c);
 
     static bc_tag_humidity_t humidity_tag_r2_0_40;
     bc_tag_humidity_init(&humidity_tag_r2_0_40, BC_TAG_HUMIDITY_REVISION_R2, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
@@ -210,8 +211,8 @@ void application_init(void)
     //----------------------------
 
     static bc_module_pir_t pir;
-	bc_module_pir_init(&pir);
-	bc_module_pir_set_event_handler(&pir, pir_event_handler, NULL);
+    bc_module_pir_init(&pir);
+    bc_module_pir_set_event_handler(&pir, pir_event_handler, NULL);
 
     usb_talk_sub("/led/-/state/set", led_state_set, NULL);
     usb_talk_sub("/led/-/state/get", led_state_get, NULL);
@@ -272,23 +273,23 @@ static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event,
 {
     (void) event_param;
 
-	if (event != BC_BUTTON_EVENT_CLICK)
-	{
-		return;
-	}
+    if (event != BC_BUTTON_EVENT_CLICK)
+    {
+        return;
+    }
 
-	if (self->_channel.virtual_channel == BC_MODULE_LCD_BUTTON_LEFT)
-	{
-		static uint16_t event_left_count = 0;
-		usb_talk_publish_push_button(&my_device_address, "lcd:left", &event_left_count);
-		event_left_count ++;
-	}
-	else
-	{
-		static uint16_t event_right_count = 0;
-		usb_talk_publish_push_button(&my_device_address, "lcd:right", &event_right_count);
-		event_right_count++;
-	}
+    if (self->_channel.virtual_channel == BC_MODULE_LCD_BUTTON_LEFT)
+    {
+        static uint16_t event_left_count = 0;
+        usb_talk_publish_push_button(&my_device_address, "lcd:left", &event_left_count);
+        event_left_count++;
+    }
+    else
+    {
+        static uint16_t event_right_count = 0;
+        usb_talk_publish_push_button(&my_device_address, "lcd:right", &event_right_count);
+        event_right_count++;
+    }
 }
 
 static void radio_event_handler(bc_radio_event_t event, void *event_param)
@@ -335,7 +336,6 @@ void bc_radio_on_thermometer(uint64_t *peer_device_address, uint8_t *i2c, float 
     usb_talk_publish_thermometer(peer_device_address, i2c, temperature);
 }
 
-
 void bc_radio_on_humidity(uint64_t *peer_device_address, uint8_t *i2c, float *percentage)
 {
     (void) peer_device_address;
@@ -368,118 +368,126 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 {
     if (*length == 2)
     {
-    	switch (buffer[0]) {
+        switch (buffer[0])
+        {
             case RADIO_LED:
-			{
-				bool state = buffer[1];
-				usb_talk_publish_led(peer_device_address, &state);
-				break;
-			}
-			case RADIO_RELAY_0:
-			{
-				uint8_t number = 0;
-				bc_module_relay_state_t state = buffer[1];
-				usb_talk_publish_module_relay(peer_device_address, &number, &state);
-				break;
-			}
-			case RADIO_RELAY_1:
-			{
-				uint8_t number = 1;
-				bc_module_relay_state_t state = buffer[1];
-				usb_talk_publish_module_relay(peer_device_address, &number, &state);
-				break;
-			}
-			case RADIO_RELAY_POWER:
-			{
-				bool state = buffer[1];
-				usb_talk_publish_relay(peer_device_address, &state);
-				break;
-			}
-			default:
             {
-				break;
+                bool state = buffer[1];
+                usb_talk_publish_led(peer_device_address, &state);
+                break;
             }
-		}
+            case RADIO_RELAY_0:
+            {
+                uint8_t number = 0;
+                bc_module_relay_state_t state = buffer[1];
+                usb_talk_publish_module_relay(peer_device_address, &number, &state);
+                break;
+            }
+            case RADIO_RELAY_1:
+            {
+                uint8_t number = 1;
+                bc_module_relay_state_t state = buffer[1];
+                usb_talk_publish_module_relay(peer_device_address, &number, &state);
+                break;
+            }
+            case RADIO_RELAY_POWER:
+            {
+                bool state = buffer[1];
+                usb_talk_publish_relay(peer_device_address, &state);
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
     }
     else if (*length == 3)
     {
-    	switch (buffer[0]) {
-			case RADIO_PIR:
-			{
-				uint16_t event_count;
-				memcpy(&event_count, buffer + 1 , sizeof(event_count));
-				usb_talk_publish_event_count(peer_device_address, "pir", &event_count);
-				break;
-			}
-			case RADIO_FLOOD_DETECTOR:
-			{
-				usb_talk_publish_flood_detector(peer_device_address, (char *)(buffer + 1), (bool *)(buffer + 2));
-				break;
-			}
-			case RADIO_LCD_BUTTON_LEFT:
-			{
-				uint16_t event_count;
-				memcpy(&event_count, buffer + 1 , sizeof(event_count));
-				usb_talk_publish_push_button(peer_device_address, "lcd:left", &event_count);
-				break;
-			}
-			case RADIO_LCD_BUTTON_RIGHT:
-			{
-				uint16_t event_count;
-				memcpy(&event_count, buffer + 1 , sizeof(event_count));
-				usb_talk_publish_push_button(peer_device_address, "lcd:right", &event_count);
-				break;
-			}
-			case RADIO_ACCELEROMETER_ALERT:
-			{
-				uint16_t event_count;
-				memcpy(&event_count, buffer + 1 , sizeof(event_count));
-				usb_talk_publish_event_count(peer_device_address, "accelerometer", &event_count);
-				break;
-			}
-    	    default:
+        switch (buffer[0])
+        {
+            case RADIO_PIR:
             {
-			    break;
+                uint16_t event_count;
+                memcpy(&event_count, buffer + 1, sizeof(event_count));
+                usb_talk_publish_event_count(peer_device_address, "pir", &event_count);
+                break;
             }
-    	}
+            case RADIO_FLOOD_DETECTOR:
+            {
+                usb_talk_publish_flood_detector(peer_device_address, (char *) (buffer + 1), (bool *) (buffer + 2));
+                break;
+            }
+            case RADIO_LCD_BUTTON_LEFT:
+            {
+                uint16_t event_count;
+                memcpy(&event_count, buffer + 1, sizeof(event_count));
+                usb_talk_publish_push_button(peer_device_address, "lcd:left", &event_count);
+                break;
+            }
+            case RADIO_LCD_BUTTON_RIGHT:
+            {
+                uint16_t event_count;
+                memcpy(&event_count, buffer + 1, sizeof(event_count));
+                usb_talk_publish_push_button(peer_device_address, "lcd:right", &event_count);
+                break;
+            }
+            case RADIO_ACCELEROMETER_ALERT:
+            {
+                uint16_t event_count;
+                memcpy(&event_count, buffer + 1, sizeof(event_count));
+                usb_talk_publish_event_count(peer_device_address, "accelerometer", &event_count);
+                break;
+            }
+            case RADIO_MAGNET_SWITCH_STATE:
+            {
+                usb_talk_publish_bool(peer_device_address, "magnet-switch", buffer[1] == RADIO_CHANNEL_A ? "a" : "b", (bool *) &buffer[2]);
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
     }
     else if (*length == 5)
     {
-    	switch (buffer[0]) {
-			case RADIO_THERMOSTAT_SET_POINT_TEMPERATURE:
-			{
-				float temperature;
-				memcpy(&temperature, buffer + 1 , sizeof(temperature));
-				usb_talk_publish_float(peer_device_address, "thermostat/set-point/temperature", &temperature);
-				break;
-			}
-			default:
-			{
-				break;
-			}
+        switch (buffer[0])
+        {
+            case RADIO_THERMOSTAT_SET_POINT_TEMPERATURE:
+            {
+                float temperature;
+                memcpy(&temperature, buffer + 1, sizeof(temperature));
+                usb_talk_publish_float(peer_device_address, "thermostat/set-point/temperature", &temperature);
+                break;
+            }
+            default:
+            {
+                break;
+            }
 
-    	}
+        }
     }
     else if (*length == 13)
     {
-        switch (buffer[0]) {
-        case RADIO_ACCELEROMETER_ACCELERATION:
+        switch (buffer[0])
         {
-            float x_axis, y_axis, z_axis;
-            memcpy(&x_axis, buffer + 1, sizeof(x_axis));
-            memcpy(&y_axis, buffer + 1 + sizeof(x_axis), sizeof(y_axis));
-            memcpy(&z_axis, buffer + 1 + sizeof(x_axis) + sizeof(y_axis), sizeof(z_axis));
-            usb_talk_publish_accelerometer_acceleration(peer_device_address, &x_axis, &y_axis, &z_axis);
-            break;
-        }
-        default:
-        {
-            break;
-        }
+            case RADIO_ACCELEROMETER_ACCELERATION:
+            {
+                float x_axis, y_axis, z_axis;
+                memcpy(&x_axis, buffer + 1, sizeof(x_axis));
+                memcpy(&y_axis, buffer + 1 + sizeof(x_axis), sizeof(y_axis));
+                memcpy(&z_axis, buffer + 1 + sizeof(x_axis) + sizeof(y_axis), sizeof(z_axis));
+                usb_talk_publish_accelerometer_acceleration(peer_device_address, &x_axis, &y_axis, &z_axis);
+                break;
+            }
+            default:
+            {
+                break;
+            }
 
+        }
     }
-    }
-
 }
 
 static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param)
@@ -493,7 +501,7 @@ static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_tem
 
     if (bc_tag_temperature_get_temperature_celsius(self, &value))
     {
-        usb_talk_publish_thermometer(&my_device_address, (uint8_t *)event_param, &value);
+        usb_talk_publish_thermometer(&my_device_address, (uint8_t *) event_param, &value);
     }
 }
 
@@ -508,7 +516,7 @@ static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_
 
     if (bc_tag_humidity_get_humidity_percentage(self, &value))
     {
-        usb_talk_publish_humidity_sensor(&my_device_address, (uint8_t *)event_param, &value);
+        usb_talk_publish_humidity_sensor(&my_device_address, (uint8_t *) event_param, &value);
     }
 }
 
@@ -523,7 +531,7 @@ static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_e
 
     if (bc_tag_lux_meter_get_illuminance_lux(self, &value))
     {
-        usb_talk_publish_lux_meter(&my_device_address, (uint8_t *)event_param, &value);
+        usb_talk_publish_lux_meter(&my_device_address, (uint8_t *) event_param, &value);
     }
 }
 
@@ -547,7 +555,7 @@ static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_baromet
         return;
     }
 
-    usb_talk_publish_barometer(&my_device_address, (uint8_t *)event_param, &pascal, &meter);
+    usb_talk_publish_barometer(&my_device_address, (uint8_t *) event_param, &pascal, &meter);
 }
 
 void co2_event_handler(bc_module_co2_event_t event, void *event_param)
@@ -566,15 +574,15 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
 
 static void pir_event_handler(bc_module_pir_t *self, bc_module_pir_event_t event, void*event_param)
 {
-	(void) self;
-	(void) event_param;
+    (void) self;
+    (void) event_param;
 
-	if (event == BC_MODULE_PIR_EVENT_MOTION)
-	{
-		static uint16_t event_count = 0;
-		event_count++;
-		usb_talk_publish_event_count(&my_device_address, "pir", &event_count);
-	}
+    if (event == BC_MODULE_PIR_EVENT_MOTION)
+    {
+        static uint16_t event_count = 0;
+        event_count++;
+        usb_talk_publish_event_count(&my_device_address, "pir", &event_count);
+    }
 }
 
 static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -589,7 +597,7 @@ static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload,
 
     if (my_device_address == *device_address)
     {
-    	led_state = state;
+        led_state = state;
 
         bc_led_set_mode(&led, led_state ? BC_LED_MODE_ON : BC_LED_MODE_OFF);
 
@@ -597,7 +605,7 @@ static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload,
     }
     else
     {
-    	_radio_pub_state_set(RADIO_LED_SET, device_address, state);
+        _radio_pub_state_set(RADIO_LED_SET, device_address, state);
     }
 }
 
@@ -607,12 +615,12 @@ static void led_state_get(uint64_t *device_address, usb_talk_payload_t *payload,
     (void) param;
 
     if (my_device_address == *device_address)
-	{
-    	usb_talk_publish_led(&my_device_address, &led_state);
-	}
+    {
+        usb_talk_publish_led(&my_device_address, &led_state);
+    }
     else
     {
-    	_radio_pub_state_get(RADIO_LED_GET, device_address);
+        _radio_pub_state_get(RADIO_LED_GET, device_address);
     }
 }
 
@@ -627,14 +635,14 @@ static void relay_state_set(uint64_t *device_address, usb_talk_payload_t *payloa
     }
 
     if (my_device_address == *device_address)
-	{
+    {
         bc_module_power_relay_set_state(state);
 
         usb_talk_publish_relay(&my_device_address, &state);
-	}
+    }
     else
     {
-    	_radio_pub_state_set(RADIO_RELAY_POWER_SET, device_address, state);
+        _radio_pub_state_set(RADIO_RELAY_POWER_SET, device_address, state);
     }
 }
 
@@ -644,14 +652,14 @@ static void relay_state_get(uint64_t *device_address, usb_talk_payload_t *payloa
     (void) param;
 
     if (my_device_address == *device_address)
-	{
+    {
         bool state = bc_module_power_relay_get_state();
 
         usb_talk_publish_relay(&my_device_address, &state);
-	}
+    }
     else
     {
-    	_radio_pub_state_get(RADIO_RELAY_POWER_GET, device_address);
+        _radio_pub_state_get(RADIO_RELAY_POWER_GET, device_address);
     }
 
 }
@@ -661,7 +669,7 @@ static void module_relay_state_set(uint64_t *device_address, usb_talk_payload_t 
     (void) payload;
 
     bool state;
-    uint8_t *number = (uint8_t *)param;
+    uint8_t *number = (uint8_t *) param;
 
     if (!usb_talk_payload_get_bool(payload, &state))
     {
@@ -669,32 +677,32 @@ static void module_relay_state_set(uint64_t *device_address, usb_talk_payload_t 
     }
 
     if (my_device_address == *device_address)
-	{
-    	bc_module_relay_set_state(*number == 0 ? &relay_0_0 : &relay_0_1, state);
-    	bc_module_relay_state_t relay_state = state ? BC_MODULE_RELAY_STATE_TRUE : BC_MODULE_RELAY_STATE_FALSE;
-    	usb_talk_publish_module_relay(&my_device_address, number, &relay_state);
-	}
+    {
+        bc_module_relay_set_state(*number == 0 ? &relay_0_0 : &relay_0_1, state);
+        bc_module_relay_state_t relay_state = state ? BC_MODULE_RELAY_STATE_TRUE : BC_MODULE_RELAY_STATE_FALSE;
+        usb_talk_publish_module_relay(&my_device_address, number, &relay_state);
+    }
     else
     {
-    	_radio_pub_state_set(*number == 0 ? RADIO_RELAY_0_SET : RADIO_RELAY_1_SET, device_address, state);
+        _radio_pub_state_set(*number == 0 ? RADIO_RELAY_0_SET : RADIO_RELAY_1_SET, device_address, state);
     }
 }
 
 static void module_relay_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
     (void) payload;
-    uint8_t *number = (uint8_t *)param;
+    uint8_t *number = (uint8_t *) param;
 
     if (my_device_address == *device_address)
-	{
+    {
 
         bc_module_relay_state_t state = bc_module_relay_get_state(*number == 0 ? &relay_0_0 : &relay_0_1);
 
         usb_talk_publish_module_relay(&my_device_address, number, &state);
-	}
+    }
     else
     {
-    	_radio_pub_state_get(*number == 0 ? RADIO_RELAY_0_GET : RADIO_RELAY_1_GET, device_address);
+        _radio_pub_state_get(*number == 0 ? RADIO_RELAY_0_GET : RADIO_RELAY_1_GET, device_address);
     }
 
 }
@@ -704,9 +712,9 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
     (void) param;
 
     if (my_device_address != *device_address)
-	{
-		return;
-	}
+    {
+        return;
+    }
 
     int x;
     int y;
@@ -735,7 +743,8 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
     }
 
     usb_talk_payload_get_key_int(payload, "font", &font_size);
-    switch (font_size) {
+    switch (font_size)
+    {
         case 11:
         {
             bc_module_lcd_set_font(&bc_font_ubuntu_11);
@@ -788,178 +797,177 @@ static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *paylo
     }
 
     if (my_device_address != *device_address)
-	{
-		return;
-	}
+    {
+        return;
+    }
 
     bc_module_lcd_clear();
 }
 
 static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) param;
-	uint8_t buffer[1 + sizeof(uint64_t) + 4];
-	buffer[0] = RADIO_LED_STRIP_COLOR_SET;
-	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    (void) param;
+    uint8_t buffer[1 + sizeof(uint64_t) + 4];
+    buffer[0] = RADIO_LED_STRIP_COLOR_SET;
+    memcpy(buffer + 1, device_address, sizeof(uint64_t));
 
-	char str[12];
-	size_t length = sizeof(str);
-	if (!usb_talk_payload_get_string(payload, str, &length))
-	{
-		return;
-	}
+    char str[12];
+    size_t length = sizeof(str);
+    if (!usb_talk_payload_get_string(payload, str, &length))
+    {
+        return;
+    }
 
-	if (((length != 7) && (length != 11)) || (str[0] != '#'))
-	{
-		return;
-	}
+    if (((length != 7) && (length != 11)) || (str[0] != '#'))
+    {
+        return;
+    }
 
-	buffer[sizeof(uint64_t) + 1] = usb_talk_hex_to_u8(str + 1);
-	buffer[sizeof(uint64_t) + 2] = usb_talk_hex_to_u8(str + 3);
-	buffer[sizeof(uint64_t) + 3] = usb_talk_hex_to_u8(str + 5);
-	buffer[sizeof(uint64_t) + 4] =  (length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
+    buffer[sizeof(uint64_t) + 1] = usb_talk_hex_to_u8(str + 1);
+    buffer[sizeof(uint64_t) + 2] = usb_talk_hex_to_u8(str + 3);
+    buffer[sizeof(uint64_t) + 3] = usb_talk_hex_to_u8(str + 5);
+    buffer[sizeof(uint64_t) + 4] = (length == 11) ? usb_talk_hex_to_u8(str + 8) : 0x00;
 
-	bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
 static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) param;
-	int value;
-	if (!usb_talk_payload_get_int(payload, &value))
-	{
-		return;
-	}
+    (void) param;
+    int value;
+    if (!usb_talk_payload_get_int(payload, &value))
+    {
+        return;
+    }
 
-	if ((value < 0) || value > 100)
-	{
-		return;
-	}
+    if ((value < 0) || value > 100)
+    {
+        return;
+    }
 
-	uint8_t buffer[1 + sizeof(uint64_t) + 1];
-	buffer[0] = RADIO_LED_STRIP_BRIGHTNESS_SET;
-	memcpy(buffer + 1, device_address, sizeof(uint64_t));
-	buffer[sizeof(uint64_t) + 1] = value;
+    uint8_t buffer[1 + sizeof(uint64_t) + 1];
+    buffer[0] = RADIO_LED_STRIP_BRIGHTNESS_SET;
+    memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    buffer[sizeof(uint64_t) + 1] = value;
 
-	bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
 static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) param;
-	uint8_t buffer[64 - 9];
-	buffer[0] = RADIO_LED_STRIP_COMPOUND_SET;
-	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    (void) param;
+    uint8_t buffer[64 - 9];
+    buffer[0] = RADIO_LED_STRIP_COMPOUND_SET;
+    memcpy(buffer + 1, device_address, sizeof(uint64_t));
 
-	int count_sum = 0;
-	size_t length;
+    int count_sum = 0;
+    size_t length;
 
-	do
-	{
-		length = sizeof(buffer) - sizeof(uint64_t) - 2;
+    do
+    {
+        length = sizeof(buffer) - sizeof(uint64_t) - 2;
 
-		buffer[sizeof(uint64_t) + 1] = count_sum;
+        buffer[sizeof(uint64_t) + 1] = count_sum;
 
-		usb_talk_payload_get_compound_buffer(payload, buffer + sizeof(uint64_t) + 2, &length, &count_sum);
+        usb_talk_payload_get_compound_buffer(payload, buffer + sizeof(uint64_t) + 2, &length, &count_sum);
 
-		bc_radio_pub_buffer(buffer, length + sizeof(uint64_t) + 2);
+        bc_radio_pub_buffer(buffer, length + sizeof(uint64_t) + 2);
 
-	} while ((length == 45) && (count_sum < 255));
+    } while ((length == 45) && (count_sum < 255));
 
 }
 
 static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) param;
-	uint8_t buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + sizeof(uint32_t)];
-	int type;
-	int int_wait;
-	uint16_t wait;
+    (void) param;
+    uint8_t buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + sizeof(uint32_t)];
+    int type;
+    int int_wait;
+    uint16_t wait;
 
-	buffer[0] = RADIO_LED_STRIP_EFFECT_SET;
-	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    buffer[0] = RADIO_LED_STRIP_EFFECT_SET;
+    memcpy(buffer + 1, device_address, sizeof(uint64_t));
 
-	if (!usb_talk_payload_get_key_enum(payload, "type", &type, "test", "rainbow", "rainbow-cycle", "theater-chase-rainbow", "color-wipe", "theater-chase"))
-	{
-		return;
-	}
+    if (!usb_talk_payload_get_key_enum(payload, "type", &type, "test", "rainbow", "rainbow-cycle", "theater-chase-rainbow", "color-wipe", "theater-chase"))
+    {
+        return;
+    }
 
-	buffer[1 + sizeof(uint64_t)] = (uint8_t)type;
+    buffer[1 + sizeof(uint64_t)] = (uint8_t) type;
 
-	if (type > RADIO_LED_STRIP_EFFECT_TYPE_TEST)
-	{
-		if (!usb_talk_payload_get_key_int(payload, "wait", &int_wait))
-		{
-			return;
-		}
+    if (type > RADIO_LED_STRIP_EFFECT_TYPE_TEST)
+    {
+        if (!usb_talk_payload_get_key_int(payload, "wait", &int_wait))
+        {
+            return;
+        }
 
-		if (int_wait < 0)
-		{
-			return;
-		}
+        if (int_wait < 0)
+        {
+            return;
+        }
 
-		wait = (uint16_t)int_wait;
+        wait = (uint16_t) int_wait;
 
-		memcpy(buffer + 1 + sizeof(uint64_t) + 1, &wait, sizeof(wait));
-	}
+        memcpy(buffer + 1 + sizeof(uint64_t) + 1, &wait, sizeof(wait));
+    }
 
-	if (type > RADIO_LED_STRIP_EFFECT_TYPE_THEATER_CHASE_RAINBOW)
-	{
-		char str[12];
-		size_t length = sizeof(str);
-		if (!usb_talk_payload_get_key_string(payload, "color", str, &length))
-		{
-			return;
-		}
+    if (type > RADIO_LED_STRIP_EFFECT_TYPE_THEATER_CHASE_RAINBOW)
+    {
+        char str[12];
+        size_t length = sizeof(str);
+        if (!usb_talk_payload_get_key_string(payload, "color", str, &length))
+        {
+            return;
+        }
 
-		if (((length != 7) && (length != 11)) || (str[0] != '#'))
-		{
-			return;
-		}
+        if (((length != 7) && (length != 11)) || (str[0] != '#'))
+        {
+            return;
+        }
 
-		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 3] = usb_talk_hex_to_u8(str + 1);
-		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 2] = usb_talk_hex_to_u8(str + 3);
-		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 1] = usb_talk_hex_to_u8(str + 5);
-		buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 0] = (length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
-	}
+        buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 3] = usb_talk_hex_to_u8(str + 1);
+        buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 2] = usb_talk_hex_to_u8(str + 3);
+        buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 1] = usb_talk_hex_to_u8(str + 5);
+        buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 0] = (length == 11) ? usb_talk_hex_to_u8(str + 8) : 0x00;
+    }
 
-	bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
 static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) param;
+    (void) param;
 
-	float temperature;
-	int min;
-	int max;
-	uint8_t buffer[1 + sizeof(uint64_t) + sizeof(float) + 1 + 1];
+    float temperature;
+    int min;
+    int max;
+    uint8_t buffer[1 + sizeof(uint64_t) + sizeof(float) + 1 + 1];
 
-	if (!usb_talk_payload_get_key_float(payload, "temperature", &temperature))
-	{
-		return;
-	}
+    if (!usb_talk_payload_get_key_float(payload, "temperature", &temperature))
+    {
+        return;
+    }
 
-	if (!usb_talk_payload_get_key_int(payload, "min", &min) || (min > 127) || (min < -128))
-	{
-		return;
-	}
+    if (!usb_talk_payload_get_key_int(payload, "min", &min) || (min > 127) || (min < -128))
+    {
+        return;
+    }
 
+    if (!usb_talk_payload_get_key_int(payload, "max", &max) || (max > 127) || (max < -128))
+    {
+        return;
+    }
 
-	if (!usb_talk_payload_get_key_int(payload, "max", &max) || (max > 127) || (max < -128))
-	{
-		return;
-	}
+    buffer[0] = RADIO_LED_STRIP_THERMOMETER_SET;
+    memcpy(buffer + 1, device_address, sizeof(uint64_t));
 
-	buffer[0] = RADIO_LED_STRIP_THERMOMETER_SET;
-	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    memcpy(buffer + 1 + sizeof(uint64_t), &temperature, sizeof(temperature));
 
-	memcpy(buffer + 1 + sizeof(uint64_t), &temperature, sizeof(temperature));
+    buffer[1 + sizeof(uint64_t) + sizeof(uint32_t)] = (int8_t) min;
+    buffer[1 + sizeof(uint64_t) + sizeof(uint32_t) + 1] = (int8_t) max;
 
-	buffer[1 + sizeof(uint64_t) + sizeof(uint32_t)] = (int8_t) min;
-	buffer[1 + sizeof(uint64_t) + sizeof(uint32_t) + 1] = (int8_t) max;
-
-	bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
 static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -968,9 +976,9 @@ static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payloa
     (void) payload;
 
     if (my_device_address != *device_address)
-	{
-		return;
-	}
+    {
+        return;
+    }
 
     uint64_t address[BC_RADIO_MAX_DEVICES];
 
@@ -982,64 +990,64 @@ static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payloa
 
 static void radio_node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) param;
+    (void) param;
     if (my_device_address != *device_address)
-	{
-		return;
-	}
+    {
+        return;
+    }
 
     _radio_node(payload, bc_radio_peer_device_add);
 }
 
 static void radio_node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) param;
+    (void) param;
     if (my_device_address != *device_address)
-	{
-		return;
-	}
+    {
+        return;
+    }
 
     _radio_node(payload, bc_radio_peer_device_remove);
 }
 
-static void _radio_node(usb_talk_payload_t *payload, bool (* call)(uint64_t))
+static void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t))
 {
-	char tmp[13];
-	size_t length = sizeof(tmp);
+    char tmp[13];
+    size_t length = sizeof(tmp);
 
-	if (!usb_talk_payload_get_string(payload, tmp, &length))
-	{
-		return;
-	}
+    if (!usb_talk_payload_get_string(payload, tmp, &length))
+    {
+        return;
+    }
 
-	if (length == 12)
-	{
-		uint64_t device_address = 0;
+    if (length == 12)
+    {
+        uint64_t device_address = 0;
 
-		if (sscanf(tmp, "%012llx/", &device_address))
-		{
-			call(device_address);
-		}
-	}
+        if (sscanf(tmp, "%012llx/", &device_address))
+        {
+            call(device_address);
+        }
+    }
 }
 
 static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)
 {
-	uint8_t buffer[1 + sizeof(uint64_t) + 1];
+    uint8_t buffer[1 + sizeof(uint64_t) + 1];
 
-	buffer[0] = type;
-	memcpy(buffer + 1, device_address, sizeof(uint64_t));
-	buffer[sizeof(uint64_t) + 1] = state;
+    buffer[0] = type;
+    memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    buffer[sizeof(uint64_t) + 1] = state;
 
-	bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
 static void _radio_pub_state_get(uint8_t type, uint64_t *device_address)
 {
-	uint8_t buffer[1 + sizeof(uint64_t)];
+    uint8_t buffer[1 + sizeof(uint64_t)];
 
-	buffer[0] = type;
-	memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    buffer[0] = type;
+    memcpy(buffer + 1, device_address, sizeof(uint64_t));
 
-	bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_pub_buffer(buffer, sizeof(buffer));
 }

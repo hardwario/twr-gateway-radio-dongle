@@ -441,7 +441,7 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
             }
             case RADIO_MAGNET_SWITCH_STATE:
             {
-                usb_talk_publish_bool(peer_device_address, "magnet-switch", buffer[1] == RADIO_CHANNEL_A ? "a" : "b", (bool *) &buffer[2]);
+                usb_talk_publish_bool(peer_device_address, "magnet-switch", buffer[1] == RADIO_CHANNEL_A ? "a" : "b", "state", (bool *) &buffer[2]);
                 break;
             }
             default:

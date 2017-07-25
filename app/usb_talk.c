@@ -72,11 +72,11 @@ void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, flo
 	usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_bool(uint64_t *device_address, const char *subtopic, const char *number, bool *state)
+void usb_talk_publish_bool(uint64_t *device_address, const char *subtopic, const char *number, const char *name, bool *state)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/%s/%s\", %s]\n",
-                *device_address, subtopic, number, *state ? "true" : "false");
+                "[\"%012llx/%s/%s/%s\", %s]\n",
+                *device_address, subtopic, number, name, *state ? "true" : "false");
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }

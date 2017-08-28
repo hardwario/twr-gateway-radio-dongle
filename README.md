@@ -54,7 +54,6 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     ```
 
 #### Relay module
-
   * On
     ```
     mosquitto_pub -t "node/{id}/relay/0:0/state/set" -m true
@@ -119,12 +118,16 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
 
 
 #### LCD module
-  Beware, it works only usb-gateway
-
-  * Write text, supported font size [11, 13, 15, 24, 28, 33], default font is 15
+  * Write text, supported font size [11, 13, 15, 24, 28, 33], default font is 15, color can by true or false, default is true
     ```
     mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 10, "text": "BigClown"}'
     mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 40, "text": "BigClown", "font": 28}'
+    mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 10, "text": "BigClown", "color": true}'
+    ```
+
+  * Clear
+    ```
+    mosquitto_pub -t "node/{id}/lcd/-/screen/clear" -n
     ```
 
 #### Radio

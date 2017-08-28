@@ -12,7 +12,7 @@
 #define USB_TALK_TOKEN_PAYLOAD_KEY   3
 #define USB_TALK_TOKEN_PAYLOAD_VALUE 4
 
-#define USB_TALK_SUBSCRIBES 16
+#define USB_TALK_SUBSCRIBES 20
 
 static struct
 {
@@ -63,6 +63,24 @@ void usb_talk_send_string(const char *buffer)
     bc_usb_cdc_write(buffer, strlen(buffer));
 }
 
+void usb_talk_publish_bool(uint64_t *device_address, const char *subtopics, bool *value)
+{
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                "[\"%012llx/%s\", %s]\n",
+                *device_address, subtopics, *value ? "true" : "false");
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
+void usb_talk_publish_int(uint64_t *device_address, const char *subtopics, int *value)
+{
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                "[\"%012llx/%s\", %d]\n",
+                *device_address, subtopics, *value);
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
 void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, float *value)
 {
 	snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
@@ -72,7 +90,7 @@ void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, flo
 	usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_bool(uint64_t *device_address, const char *subtopic, const char *number, const char *name, bool *state)
+void usb_talk_publish_complex_bool(uint64_t *device_address, const char *subtopic, const char *number, const char *name, bool *state)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/%s/%s/%s\", %s]\n",
@@ -301,7 +319,6 @@ void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
-
 
 static void _usb_talk_task(void *param)
 {

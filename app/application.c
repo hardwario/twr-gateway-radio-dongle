@@ -759,14 +759,10 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
 {
     (void) param;
 
-    if (my_device_address != *device_address)
-    {
-        return;
-    }
-
     int x;
     int y;
-    int font_size = 0;
+    int font_size;
+    bool color;
     char text[32];
     size_t length = sizeof(text);
 
@@ -790,66 +786,91 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
         lcd.mqtt = true;
     }
 
-    usb_talk_payload_get_key_int(payload, "font", &font_size);
-    switch (font_size)
+    if (!usb_talk_payload_get_key_int(payload, "font", &font_size))
     {
-        case 11:
-        {
-            bc_module_lcd_set_font(&bc_font_ubuntu_11);
-            break;
-        }
-        case 13:
-        {
-            bc_module_lcd_set_font(&bc_font_ubuntu_13);
-            break;
-        }
-        case 15:
-        {
-            bc_module_lcd_set_font(&bc_font_ubuntu_15);
-            break;
-        }
-        case 24:
-        {
-            bc_module_lcd_set_font(&bc_font_ubuntu_24);
-            break;
-        }
-        case 28:
-        {
-            bc_module_lcd_set_font(&bc_font_ubuntu_28);
-            break;
-        }
-        case 33:
-        {
-            bc_module_lcd_set_font(&bc_font_ubuntu_33);
-            break;
-        }
-        default:
-        {
-            bc_module_lcd_set_font(&bc_font_ubuntu_15);
-            break;
-        }
+        font_size = 15;
     }
 
-    bc_module_lcd_draw_string(x, y, text, true);
+    if (!usb_talk_payload_get_key_bool(payload, "color", &color))
+    {
+        color = true;
+    }
+
+    if (my_device_address == *device_address)
+    {
+        switch (font_size)
+        {
+            case 11:
+            {
+                bc_module_lcd_set_font(&bc_font_ubuntu_11);
+                break;
+            }
+            case 13:
+            {
+                bc_module_lcd_set_font(&bc_font_ubuntu_13);
+                break;
+            }
+            case 15:
+            {
+                bc_module_lcd_set_font(&bc_font_ubuntu_15);
+                break;
+            }
+            case 24:
+            {
+                bc_module_lcd_set_font(&bc_font_ubuntu_24);
+                break;
+            }
+            case 28:
+            {
+                bc_module_lcd_set_font(&bc_font_ubuntu_28);
+                break;
+            }
+            case 33:
+            {
+                bc_module_lcd_set_font(&bc_font_ubuntu_33);
+                break;
+            }
+            default:
+            {
+                bc_module_lcd_set_font(&bc_font_ubuntu_15);
+                break;
+            }
+        }
+
+        bc_module_lcd_draw_string(x, y, text, color);
+    }
+    else
+    {
+        uint8_t buffer[1 + sizeof(uint64_t) + 5 + 32]; // HEAD + ADDRESS + X + Y + FONT_SIZE + LENGTH + TEXT
+        buffer[0] = RADIO_LCD_TEXT_SET;
+        memcpy(buffer + 1, device_address, sizeof(uint64_t));
+        buffer[sizeof(uint64_t) + 1] = (uint8_t) x;
+        buffer[sizeof(uint64_t) + 2] = (uint8_t) y;
+        buffer[sizeof(uint64_t) + 3] = (uint8_t) font_size;
+        buffer[sizeof(uint64_t) + 4] = (uint8_t) color;
+        buffer[sizeof(uint64_t) + 5] = (uint8_t) length;
+        memcpy(buffer + sizeof(uint64_t) + 6, text, length + 1);
+
+        bc_radio_pub_buffer(buffer, 1 + sizeof(uint64_t) + 4 + length + 1);
+    }
 }
 
 static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
+    (void) payload;
     (void) param;
 
-    bool state;
-
-    if (!usb_talk_payload_get_bool(payload, &state) || !state)
+    if (my_device_address == *device_address)
     {
-        return;
+        bc_module_lcd_clear();
     }
-
-    if (my_device_address != *device_address)
+    else
     {
-        return;
+        uint8_t buffer[1 + sizeof(uint64_t)];
+        buffer[0] = RADIO_LCD_SCREEN_CLEAR;
+        memcpy(buffer + 1, device_address, sizeof(uint64_t));
+        bc_radio_pub_buffer(buffer, sizeof(buffer));
     }
-
-    bc_module_lcd_clear();
 }
 
 static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)

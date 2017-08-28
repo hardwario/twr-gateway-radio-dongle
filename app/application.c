@@ -53,9 +53,15 @@ static void _radio_pub_state_get(uint8_t type, uint64_t *device_address);
 
 void application_init(void)
 {
+    bc_led_init(&led, BC_GPIO_LED, false, false);
+    bc_led_set_mode(&led, BC_LED_MODE_ON);
+
     usb_talk_init();
 
-    bc_led_init(&led, BC_GPIO_LED, false, false);
+    // Initialize radio
+    bc_radio_init();
+    bc_radio_set_event_handler(radio_event_handler, NULL);
+    bc_radio_listen();
 
     bc_module_power_init();
 
@@ -76,11 +82,6 @@ void application_init(void)
     static bc_button_t lcd_right;
     bc_button_init_virtual(&lcd_right, BC_MODULE_LCD_BUTTON_RIGHT, bc_module_lcd_get_button_driver(), false);
     bc_button_set_event_handler(&lcd_right, lcd_button_event_handler, NULL);
-
-    // Initialize radio
-    bc_radio_init();
-    bc_radio_set_event_handler(radio_event_handler, NULL);
-    bc_radio_listen();
 
     // Tags
     static bc_tag_temperature_t temperature_tag_0_48;
@@ -237,6 +238,8 @@ void application_init(void)
     usb_talk_sub("/radio/-/node/add", radio_node_add, NULL);
     usb_talk_sub("/radio/-/node/remove", radio_node_remove, NULL);
 
+    bc_led_set_mode(&led, BC_LED_MODE_OFF);
+    led_state = false;
 }
 
 void application_task(void)
@@ -261,6 +264,8 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
         static uint16_t event_count = 0;
         usb_talk_publish_push_button(&my_device_address, "-", &event_count);
         event_count++;
+        bc_led_set_mode(&led, BC_LED_MODE_OFF);
+        bc_led_pulse(&led, 100);
     }
     else if (event == BC_BUTTON_EVENT_HOLD)
     {
@@ -366,6 +371,49 @@ void bc_radio_on_co2(uint64_t *peer_device_address, float *concentration)
 
 void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *length)
 {
+    if (*length < 1)
+    {
+        return;
+    }
+
+    switch (buffer[0]) {
+        case RADIO_USER_TOPIC_BOOL:
+        {
+            if (*length < (1 + 1 + 1))
+            {
+                return;
+            }
+            usb_talk_publish_bool(peer_device_address, (char *)buffer + 2, (bool *)(buffer + 1));
+            break;
+        }
+        case RADIO_USER_TOPIC_INT:
+        {
+            if (*length < (1 + 4 + 1))
+            {
+                return;
+            }
+            int value;
+            memcpy(&value, buffer + 1, sizeof(int));
+            usb_talk_publish_int(peer_device_address, (char *)buffer + 5, &value);
+            break;
+        }
+        case RADIO_USER_TOPIC_FLOAT:
+        {
+            if (*length < (1 + 4 + 1))
+            {
+                return;
+            }
+            float value;
+            memcpy(&value, buffer + 1, sizeof(value));
+            usb_talk_publish_float(peer_device_address, (char *)buffer + 5, &value);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
     if (*length == 2)
     {
         switch (buffer[0])
@@ -441,7 +489,7 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
             }
             case RADIO_MAGNET_SWITCH_STATE:
             {
-                usb_talk_publish_bool(peer_device_address, "magnet-switch", buffer[1] == RADIO_CHANNEL_A ? "a" : "b", "state", (bool *) &buffer[2]);
+                usb_talk_publish_complex_bool(peer_device_address, "magnet-switch", buffer[1] == RADIO_CHANNEL_A ? "a" : "b", "state", (bool *) &buffer[2]);
                 break;
             }
             default:
@@ -782,7 +830,7 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
         }
     }
 
-    bc_module_lcd_draw_string(x, y, text);
+    bc_module_lcd_draw_string(x, y, text, true);
 }
 
 static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *payload, void *param)

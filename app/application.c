@@ -766,12 +766,9 @@ static void module_relay_pulse(uint64_t *device_address, usb_talk_payload_t *pay
         buffer[0] = (*number == 0) ? RADIO_RELAY_0_PULSE_SET : RADIO_RELAY_1_PULSE_SET;
         memcpy(buffer + 1, device_address, sizeof(uint64_t));
         buffer[sizeof(uint64_t) + 1] = (uint8_t) direction;
-        buffer[sizeof(uint64_t) + 2] = (uint8_t) ((duration >> 0) & 0xFF);
-        buffer[sizeof(uint64_t) + 3] = (uint8_t) ((duration >> 8) & 0xFF);
-        buffer[sizeof(uint64_t) + 4] = (uint8_t) ((duration >> 16) & 0xFF);
-        buffer[sizeof(uint64_t) + 5] = (uint8_t) ((duration >> 24) & 0xFF);
+        memcpy(&buffer[sizeof(uint64_t) + 2], &duration, sizeof(uint32_t));
 
-        bc_radio_pub_buffer(buffer, 1 + sizeof(uint64_t) + 1 + 4);
+        bc_radio_pub_buffer(buffer, sizeof(buffer));
     }
 }
 

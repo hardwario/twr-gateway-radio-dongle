@@ -17,8 +17,15 @@ typedef struct
 
 typedef void (*usb_talk_sub_callback_t)(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
+typedef struct {
+    const char *topic;
+    usb_talk_sub_callback_t callback;
+    void *param;
+
+} usb_talk_subscribe_t;
+
 void usb_talk_init(void);
-void usb_talk_sub(const char *topic, usb_talk_sub_callback_t callback, void *param);
+void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length);
 void usb_talk_send_string(const char *buffer);
 
 void usb_talk_publish_bool(uint64_t *device_address, const char *subtopics, bool *value);

@@ -52,12 +52,39 @@ static void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t));
 static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state);
 static void _radio_pub_state_get(uint8_t type, uint64_t *device_address);
 
+static uint8_t relay_0_number = 0;
+static uint8_t relay_1_number = 1;
+
+const usb_talk_subscribe_t subscribes[] = {
+	{"led/-/state/set", led_state_set, NULL},
+	{"led/-/state/get", led_state_get, NULL},
+	{"relay/-/state/set", relay_state_set, NULL},
+	{"relay/-/state/get", relay_state_get, NULL},
+	{"relay/0:0/state/set", module_relay_state_set, &relay_0_number},
+    {"relay/0:0/state/get", module_relay_state_get, &relay_0_number},
+    {"relay/0:0/pulse/set", module_relay_pulse, &relay_0_number},
+	{"relay/0:1/state/set", module_relay_state_set, &relay_1_number},
+    {"relay/0:1/state/get", module_relay_state_get, &relay_1_number},
+    {"relay/0:1/pulse/set", module_relay_pulse, &relay_1_number},
+	{"lcd/-/text/set", lcd_text_set, NULL},
+	{"lcd/-/screen/clear", lcd_screen_clear, NULL},
+	{"led-strip/-/color/set", led_strip_color_set, NULL},
+	{"led-strip/-/brightness/set", led_strip_brightness_set, NULL},
+	{"led-strip/-/compound/set", led_strip_compound_set, NULL},
+	{"led-strip/-/effect/set", led_strip_effect_set, NULL},
+	{"led-strip/-/thermometer/set", led_strip_thermometer_set, NULL},
+	{"radio/-/nodes/get", radio_nodes_get, NULL},
+	{"radio/-/node/add", radio_node_add, NULL},
+	{"radio/-/node/remove", radio_node_remove, NULL},
+};
+
 void application_init(void)
 {
     bc_led_init(&led, BC_GPIO_LED, false, false);
     bc_led_set_mode(&led, BC_LED_MODE_ON);
 
     usb_talk_init();
+    usb_talk_subscribes(subscribes, sizeof(subscribes) / sizeof(usb_talk_subscribe_t));
 
     // Initialize radio
     bc_radio_init();
@@ -215,31 +242,6 @@ void application_init(void)
     static bc_module_pir_t pir;
     bc_module_pir_init(&pir);
     bc_module_pir_set_event_handler(&pir, pir_event_handler, NULL);
-
-    usb_talk_sub("/led/-/state/set", led_state_set, NULL);
-    usb_talk_sub("/led/-/state/get", led_state_get, NULL);
-    usb_talk_sub("/relay/-/state/set", relay_state_set, NULL);
-    usb_talk_sub("/relay/-/state/get", relay_state_get, NULL);
-    static uint8_t relay_0_number = 0;
-    usb_talk_sub("/relay/0:0/state/set", module_relay_state_set, &relay_0_number);
-    usb_talk_sub("/relay/0:0/pulse/set", module_relay_pulse, &relay_0_number);
-    usb_talk_sub("/relay/0:0/state/get", module_relay_state_get, &relay_0_number);
-    static uint8_t relay_1_number = 1;
-    usb_talk_sub("/relay/0:1/state/set", module_relay_state_set, &relay_1_number);
-    usb_talk_sub("/relay/0:1/pulse/set", module_relay_pulse, &relay_1_number);
-    usb_talk_sub("/relay/0:1/state/get", module_relay_state_get, &relay_1_number);
-    usb_talk_sub("/lcd/-/text/set", lcd_text_set, NULL);
-    usb_talk_sub("/lcd/-/screen/clear", lcd_screen_clear, NULL);
-
-    usb_talk_sub("/led-strip/-/color/set", led_strip_color_set, NULL);
-    usb_talk_sub("/led-strip/-/brightness/set", led_strip_brightness_set, NULL);
-    usb_talk_sub("/led-strip/-/compound/set", led_strip_compound_set, NULL);
-    usb_talk_sub("/led-strip/-/effect/set", led_strip_effect_set, NULL);
-    usb_talk_sub("/led-strip/-/thermometer/set", led_strip_thermometer_set, NULL);
-
-    usb_talk_sub("/radio/-/nodes/get", radio_nodes_get, NULL);
-    usb_talk_sub("/radio/-/node/add", radio_node_add, NULL);
-    usb_talk_sub("/radio/-/node/remove", radio_node_remove, NULL);
 
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
     led_state = false;

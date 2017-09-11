@@ -12,8 +12,6 @@
 #define USB_TALK_TOKEN_PAYLOAD_KEY   3
 #define USB_TALK_TOKEN_PAYLOAD_VALUE 4
 
-#define USB_TALK_SUBSCRIBES 20
-
 static struct
 {
     char tx_buffer[320];
@@ -21,17 +19,24 @@ static struct
     size_t rx_length;
     bool rx_error;
 
-    struct {
-        const char *topic;
-        usb_talk_sub_callback_t callback;
-        void *param;
+    const usb_talk_subscribe_t *subscribes;
+    int subscribes_length;
 
-    } subscribes[USB_TALK_SUBSCRIBES];
-    size_t subscribes_length;
+#if TALK_OVER_CDC
+#else
+    uint8_t read_fifo_buffer[1024];
+    bc_fifo_t read_fifo;
+    uint8_t write_fifo_buffer[320];
+    bc_fifo_t write_fifo;
+#endif
 
 } _usb_talk;
 
-static void _usb_talk_task(void *param);
+#if TALK_OVER_CDC
+static void _usb_talk_cdc_read_task(void *param);
+#else
+static void _usb_talk_uart_event_handler(bc_uart_channel_t channel, bc_uart_event_t event, void  *event_param);
+#endif
 static void _usb_talk_process_character(char character);
 static void _usb_talk_process_message(char *message, size_t length);
 static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *value);
@@ -42,25 +47,38 @@ void usb_talk_init(void)
 {
     memset(&_usb_talk, 0, sizeof(_usb_talk));
 
+#if TALK_OVER_CDC
     bc_usb_cdc_init();
-
-    bc_scheduler_register(_usb_talk_task, NULL, 0);
+#else
+    bc_fifo_init(&_usb_talk.read_fifo, _usb_talk.read_fifo_buffer, sizeof(_usb_talk.read_fifo_buffer));
+    bc_fifo_init(&_usb_talk.write_fifo, _usb_talk.write_fifo_buffer, sizeof(_usb_talk.write_fifo_buffer));
+    bc_uart_init(BC_UART_UART2, BC_UART_BAUDRATE_9600, BC_UART_SETTING_8N1);
+    bc_uart_set_async_fifo(BC_UART_UART2, &_usb_talk.write_fifo, &_usb_talk.read_fifo);
+#endif
 }
 
-void usb_talk_sub(const char *topic, usb_talk_sub_callback_t callback, void *param)
+void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length)
 {
-    if (_usb_talk.subscribes_length >= USB_TALK_SUBSCRIBES){
-        return;
+    _usb_talk.subscribes = subscribes;
+    _usb_talk.subscribes_length = length;
+    if ((subscribes != NULL) && length > 0)
+    {
+#if TALK_OVER_CDC
+        bc_scheduler_register(_usb_talk_cdc_read_task, NULL, 0);
+#else
+        bc_uart_set_event_handler(BC_UART_UART2, _usb_talk_uart_event_handler, NULL);
+        bc_uart_async_read_start(BC_UART_UART2, 1000000);
+#endif
     }
-    _usb_talk.subscribes[_usb_talk.subscribes_length].topic = topic;
-    _usb_talk.subscribes[_usb_talk.subscribes_length].callback = callback;
-    _usb_talk.subscribes[_usb_talk.subscribes_length].param = param;
-    _usb_talk.subscribes_length++;
 }
 
 void usb_talk_send_string(const char *buffer)
 {
+#if TALK_OVER_CDC
     bc_usb_cdc_write(buffer, strlen(buffer));
+#else
+    bc_uart_async_write(BC_UART_UART2, buffer, strlen(buffer));
+#endif
 }
 
 void usb_talk_publish_bool(uint64_t *device_address, const char *subtopics, bool *value)
@@ -83,11 +101,11 @@ void usb_talk_publish_int(uint64_t *device_address, const char *subtopics, int *
 
 void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, float *value)
 {
-	snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-				"[\"%012llx/%s\", %0.2f]\n",
-				*device_address, subtopics, *value);
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                "[\"%012llx/%s\", %0.2f]\n",
+                *device_address, subtopics, *value);
 
-	usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
 void usb_talk_publish_complex_bool(uint64_t *device_address, const char *subtopic, const char *number, const char *name, bool *state)
@@ -172,8 +190,8 @@ void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *i2c, fl
             number = 3; // R2 alternate
             break;
         case 0x40 | 0x0f:
-			number = 4; // R3 default
-			break;
+            number = 4; // R3 default
+            break;
         default:
             number = 0;
     }
@@ -286,20 +304,20 @@ void usb_talk_publish_radio(uint64_t *device_address, const char *event, uint64_
 
 void usb_talk_publish_radio_nodes(uint64_t *device_address, uint64_t *peer_devices_address, int lenght)
 {
-	int offset = snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-	             "[\"%012llx/radio/-/nodes\", [",
-				 *device_address);
+    int offset = snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                 "[\"%012llx/radio/-/nodes\", [",
+                 *device_address);
 
-	for (int i = 0; i < lenght; i++)
-	{
-		offset += snprintf(_usb_talk.tx_buffer + offset, sizeof(_usb_talk.tx_buffer) - offset,
-				i == 0 ? "\"%012llx\"" : ", \"%012llx\"",
-				peer_devices_address[i]);
-	}
+    for (int i = 0; i < lenght; i++)
+    {
+        offset += snprintf(_usb_talk.tx_buffer + offset, sizeof(_usb_talk.tx_buffer) - offset,
+                i == 0 ? "\"%012llx\"" : ", \"%012llx\"",
+                peer_devices_address[i]);
+    }
 
-	strncpy(_usb_talk.tx_buffer + offset, "]]\n", sizeof(_usb_talk.tx_buffer) - offset);
+    strncpy(_usb_talk.tx_buffer + offset, "]]\n", sizeof(_usb_talk.tx_buffer) - offset);
 
-	usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
 void usb_talk_publish_flood_detector(uint64_t *device_address, const char *number, bool *state)
@@ -320,7 +338,8 @@ void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-static void _usb_talk_task(void *param)
+#if TALK_OVER_CDC
+static void _usb_talk_cdc_read_task(void *param)
 {
     (void) param;
 
@@ -343,6 +362,31 @@ static void _usb_talk_task(void *param)
 
     bc_scheduler_plan_current_now();
 }
+#else
+
+static void _usb_talk_uart_event_handler(bc_uart_channel_t channel, bc_uart_event_t event, void  *event_param)
+{
+    if (event == BC_UART_EVENT_ASYNC_READ_DATA)
+    {
+        while (true)
+        {
+            static uint8_t buffer[16];
+
+            size_t length = bc_uart_async_read(BC_UART_UART2, buffer, sizeof(buffer));
+
+            if (length == 0)
+            {
+                break;
+            }
+
+            for (size_t i = 0; i < length; i++)
+            {
+                _usb_talk_process_character((char) buffer[i]);
+            }
+        }
+    }
+}
+#endif
 
 static void _usb_talk_process_character(char character)
 {
@@ -398,21 +442,28 @@ static void _usb_talk_process_message(char *message, size_t length)
 
     size_t topic_length = tokens[USB_TALK_TOKEN_TOPIC].end - tokens[USB_TALK_TOKEN_TOPIC].start;
 
-    if (topic_length < 9)
-    {
-        return;
-    }
-
     char *topic = message + tokens[USB_TALK_TOKEN_TOPIC].start;
 
-    uint64_t device_address;
+    uint64_t device_address = 0;
 
-    sscanf(topic, "%012llx/", &device_address);
-
-    for (size_t i = 0; i < _usb_talk.subscribes_length; i++)
+    if ((topic[0] != '$') && (topic[0] != '/'))
     {
+        if (topic_length < 14)
+        {
+            return;
+        }
+        if(topic[12] != '/')
+        {
+            return;
+        }
+        sscanf(topic, "%012llx/", &device_address);
+        topic += 13;
+        topic_length -= 13;
+    }
 
-        if (strncmp(_usb_talk.subscribes[i].topic, topic + 12, topic_length - 12) == 0)
+    for (int i = 0; i < _usb_talk.subscribes_length; i++)
+    {
+        if (strncmp(_usb_talk.subscribes[i].topic, topic, topic_length) == 0)
         {
             usb_talk_payload_t payload = {
                     message,
@@ -685,60 +736,60 @@ bool usb_talk_payload_get_key_string(usb_talk_payload_t *payload, const char *ke
 
 bool usb_talk_payload_get_compound_buffer(usb_talk_payload_t *payload, uint8_t *buffer, size_t *length, int *count_sum)
 {
-	if (payload->tokens[0].type != JSMN_ARRAY)
-	{
-		return false;
-	}
+    if (payload->tokens[0].type != JSMN_ARRAY)
+    {
+        return false;
+    }
 
-	if (payload->tokens[0].size % 2 != 0)
-	{
-		return false;
-	}
+    if (payload->tokens[0].size % 2 != 0)
+    {
+        return false;
+    }
 
-	int count;
-	char str[12];
-	size_t str_length;
-	size_t _length = 0;
-	int _count_sum = 0;
+    int count;
+    char str[12];
+    size_t str_length;
+    size_t _length = 0;
+    int _count_sum = 0;
 
-	for (int i = 1; (i + 1 < payload->token_count) && (_length + 5 <= *length); i += 2)
-	{
-		if (!_usb_talk_token_get_int(payload->buffer, &payload->tokens[i], &count))
-		{
-			return false;
-		}
+    for (int i = 1; (i + 1 < payload->token_count) && (_length + 5 <= *length); i += 2)
+    {
+        if (!_usb_talk_token_get_int(payload->buffer, &payload->tokens[i], &count))
+        {
+            return false;
+        }
 
-		if (_count_sum < *count_sum)
-		{
-			_count_sum += count;
-			continue;
-		}
+        if (_count_sum < *count_sum)
+        {
+            _count_sum += count;
+            continue;
+        }
 
-		str_length = sizeof(str);
+        str_length = sizeof(str);
 
-		if (!_usb_talk_token_get_string(payload->buffer, &payload->tokens[i + 1], str, &str_length))
-		{
-			return false;
-		}
+        if (!_usb_talk_token_get_string(payload->buffer, &payload->tokens[i + 1], str, &str_length))
+        {
+            return false;
+        }
 
-		if (((str_length != 7) && (str_length != 11)) || (str[0] != '#'))
-		{
-			return false;
-		}
+        if (((str_length != 7) && (str_length != 11)) || (str[0] != '#'))
+        {
+            return false;
+        }
 
-		_count_sum += count;
+        _count_sum += count;
 
-		*(buffer + _length++) = count;
-		*(buffer + _length++) = usb_talk_hex_to_u8(str + 1);
-		*(buffer + _length++) = usb_talk_hex_to_u8(str + 3);
-		*(buffer + _length++) = usb_talk_hex_to_u8(str + 5);
-		*(buffer + _length++) =  (str_length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
-	}
+        *(buffer + _length++) = count;
+        *(buffer + _length++) = usb_talk_hex_to_u8(str + 1);
+        *(buffer + _length++) = usb_talk_hex_to_u8(str + 3);
+        *(buffer + _length++) = usb_talk_hex_to_u8(str + 5);
+        *(buffer + _length++) =  (str_length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
+    }
 
-	*length = _length;
-	*count_sum += _count_sum;
+    *length = _length;
+    *count_sum += _count_sum;
 
-	return true;
+    return true;
 }
 
 bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const char *string)
@@ -762,8 +813,8 @@ bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const 
 
 uint8_t usb_talk_hex_to_u8(const char *hex)
 {
-	uint8_t high = (*hex <= '9') ? *hex - '0' : toupper(*hex) - 'A' + 10;
-	uint8_t low = (*(hex+1) <= '9') ? *(hex+1) - '0' : toupper(*(hex+1)) - 'A' + 10;
+    uint8_t high = (*hex <= '9') ? *hex - '0' : toupper(*hex) - 'A' + 10;
+    uint8_t low = (*(hex+1) <= '9') ? *(hex+1) - '0' : toupper(*(hex+1)) - 'A' + 10;
     return (high << 4) | low;
 }
 

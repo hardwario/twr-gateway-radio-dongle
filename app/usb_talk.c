@@ -93,7 +93,7 @@ void usb_talk_send_format(const char *format, ...)
 #if TALK_OVER_CDC
     bc_usb_cdc_write(_usb_talk.tx_buffer, length);
 #else
-    bc_uart_async_write(_usb_talk.tx_buffer, length);
+    bc_uart_async_write(BC_UART_UART2, _usb_talk.tx_buffer, length);
 #endif
 }
 
@@ -379,6 +379,9 @@ static void _usb_talk_cdc_read_task(void *param)
 
 static void _usb_talk_uart_event_handler(bc_uart_channel_t channel, bc_uart_event_t event, void  *event_param)
 {
+    (void) channel;
+    (void) event_param;
+
     if (event == BC_UART_EVENT_ASYNC_READ_DATA)
     {
         while (true)

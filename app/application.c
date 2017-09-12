@@ -2,6 +2,7 @@
 #include <usb_talk.h>
 #include <bc_device_id.h>
 #include <radio.h>
+#include <sensors.h>
 
 #define UPDATE_INTERVAL 5000
 #define APPLICATION_TASK_ID 0
@@ -23,10 +24,6 @@ static bc_module_relay_t relay_0_1;
 static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
 static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
 static void radio_event_handler(bc_radio_event_t event, void *event_param);
-static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param);
-static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_event_t event, void *event_param);
-static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_event_t event, void *event_param);
-static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_barometer_event_t event, void *event_param);
 static void co2_event_handler(bc_module_co2_event_t event, void *event_param);
 static void pir_event_handler(bc_module_pir_t *self, bc_module_pir_event_t event, void*event_param);
 
@@ -62,32 +59,32 @@ static uint8_t relay_0_number = 0;
 static uint8_t relay_1_number = 1;
 
 const usb_talk_subscribe_t subscribes[] = {
-	{"led/-/state/set", led_state_set, NULL},
-	{"led/-/state/get", led_state_get, NULL},
-	{"relay/-/state/set", relay_state_set, NULL},
-	{"relay/-/state/get", relay_state_get, NULL},
-	{"relay/0:0/state/set", module_relay_state_set, &relay_0_number},
+    {"led/-/state/set", led_state_set, NULL},
+    {"led/-/state/get", led_state_get, NULL},
+    {"relay/-/state/set", relay_state_set, NULL},
+    {"relay/-/state/get", relay_state_get, NULL},
+    {"relay/0:0/state/set", module_relay_state_set, &relay_0_number},
     {"relay/0:0/state/get", module_relay_state_get, &relay_0_number},
     {"relay/0:0/pulse/set", module_relay_pulse, &relay_0_number},
-	{"relay/0:1/state/set", module_relay_state_set, &relay_1_number},
+    {"relay/0:1/state/set", module_relay_state_set, &relay_1_number},
     {"relay/0:1/state/get", module_relay_state_get, &relay_1_number},
     {"relay/0:1/pulse/set", module_relay_pulse, &relay_1_number},
-	{"lcd/-/text/set", lcd_text_set, NULL},
-	{"lcd/-/screen/clear", lcd_screen_clear, NULL},
-	{"led-strip/-/color/set", led_strip_color_set, NULL},
-	{"led-strip/-/brightness/set", led_strip_brightness_set, NULL},
-	{"led-strip/-/compound/set", led_strip_compound_set, NULL},
-	{"led-strip/-/effect/set", led_strip_effect_set, NULL},
-	{"led-strip/-/thermometer/set", led_strip_thermometer_set, NULL},
-	{"/info/get", info_get, NULL},
-	{"/nodes/get", nodes_get, NULL},
-	{"/node/add", node_add, NULL},
-	{"/node/remove", node_remove, NULL},
-	{"/nodes/purge", nodes_purge, NULL},
-	{"/scan/start", scan_start, NULL},
-	{"/scan/stop", scan_stop, NULL},
-	{"/automatic-pairing/start", automatic_pairing_start, NULL},
-	{"/automatic-pairing/stop", automatic_pairing_stop, NULL}
+    {"lcd/-/text/set", lcd_text_set, NULL},
+    {"lcd/-/screen/clear", lcd_screen_clear, NULL},
+    {"led-strip/-/color/set", led_strip_color_set, NULL},
+    {"led-strip/-/brightness/set", led_strip_brightness_set, NULL},
+    {"led-strip/-/compound/set", led_strip_compound_set, NULL},
+    {"led-strip/-/effect/set", led_strip_effect_set, NULL},
+    {"led-strip/-/thermometer/set", led_strip_thermometer_set, NULL},
+    {"/info/get", info_get, NULL},
+    {"/nodes/get", nodes_get, NULL},
+    {"/node/add", node_add, NULL},
+    {"/node/remove", node_remove, NULL},
+    {"/nodes/purge", nodes_purge, NULL},
+    {"/scan/start", scan_start, NULL},
+    {"/scan/stop", scan_stop, NULL},
+    {"/automatic-pairing/start", automatic_pairing_start, NULL},
+    {"/automatic-pairing/stop", automatic_pairing_stop, NULL}
 };
 
 void application_init(void)
@@ -98,7 +95,6 @@ void application_init(void)
     usb_talk_init();
     usb_talk_subscribes(subscribes, sizeof(subscribes) / sizeof(usb_talk_subscribe_t));
 
-    // Initialize radio
     bc_radio_init();
     bc_radio_set_event_handler(radio_event_handler, NULL);
     bc_radio_listen();
@@ -123,120 +119,7 @@ void application_init(void)
     bc_button_init_virtual(&lcd_right, BC_MODULE_LCD_BUTTON_RIGHT, bc_module_lcd_get_button_driver(), false);
     bc_button_set_event_handler(&lcd_right, lcd_button_event_handler, NULL);
 
-    // Tags
-    static bc_tag_temperature_t temperature_tag_0_48;
-    bc_tag_temperature_init(&temperature_tag_0_48, BC_I2C_I2C0, BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT);
-    bc_tag_temperature_set_update_interval(&temperature_tag_0_48, UPDATE_INTERVAL);
-    static uint8_t temperature_tag_0_48_i2c = (BC_I2C_I2C0 << 7) | BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT;
-    bc_tag_temperature_set_event_handler(&temperature_tag_0_48, temperature_tag_event_handler, &temperature_tag_0_48_i2c);
-
-    static bc_tag_temperature_t temperature_tag_0_49;
-    bc_tag_temperature_init(&temperature_tag_0_49, BC_I2C_I2C0, BC_TAG_TEMPERATURE_I2C_ADDRESS_ALTERNATE);
-    bc_tag_temperature_set_update_interval(&temperature_tag_0_49, UPDATE_INTERVAL);
-    static uint8_t temperature_tag_0_49_i2c = (BC_I2C_I2C0 << 7) | BC_TAG_TEMPERATURE_I2C_ADDRESS_ALTERNATE;
-    bc_tag_temperature_set_event_handler(&temperature_tag_0_49, temperature_tag_event_handler, &temperature_tag_0_49_i2c);
-
-    static bc_tag_temperature_t temperature_tag_1_48;
-    bc_tag_temperature_init(&temperature_tag_1_48, BC_I2C_I2C1, BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT);
-    bc_tag_temperature_set_update_interval(&temperature_tag_1_48, UPDATE_INTERVAL);
-    static uint8_t temperature_tag_1_48_i2c = (BC_I2C_I2C1 << 7) | BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT;
-    bc_tag_temperature_set_event_handler(&temperature_tag_1_48, temperature_tag_event_handler, &temperature_tag_1_48_i2c);
-
-    static bc_tag_temperature_t temperature_tag_1_49;
-    bc_tag_temperature_init(&temperature_tag_1_49, BC_I2C_I2C1, BC_TAG_TEMPERATURE_I2C_ADDRESS_ALTERNATE);
-    bc_tag_temperature_set_update_interval(&temperature_tag_1_49, UPDATE_INTERVAL);
-    static uint8_t temperature_tag_1_49_i2c = (BC_I2C_I2C1 << 7) | BC_TAG_TEMPERATURE_I2C_ADDRESS_ALTERNATE;
-    bc_tag_temperature_set_event_handler(&temperature_tag_1_49, temperature_tag_event_handler, &temperature_tag_1_49_i2c);
-
-    //----------------------------
-
-    static bc_tag_humidity_t humidity_tag_r3_0_40;
-    bc_tag_humidity_init(&humidity_tag_r3_0_40, BC_TAG_HUMIDITY_REVISION_R3, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
-    bc_tag_humidity_set_update_interval(&humidity_tag_r3_0_40, UPDATE_INTERVAL);
-    static uint8_t humidity_tag_r3_0_40_i2c = (BC_I2C_I2C0 << 7) | 0x40 | 0x0f; // 0x0f - hack
-    bc_tag_humidity_set_event_handler(&humidity_tag_r3_0_40, humidity_tag_event_handler, &humidity_tag_r3_0_40_i2c);
-
-    static bc_tag_humidity_t humidity_tag_r2_0_40;
-    bc_tag_humidity_init(&humidity_tag_r2_0_40, BC_TAG_HUMIDITY_REVISION_R2, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
-    bc_tag_humidity_set_update_interval(&humidity_tag_r2_0_40, UPDATE_INTERVAL);
-    static uint8_t humidity_tag_r2_0_40_i2c = (BC_I2C_I2C0 << 7) | 0x40;
-    bc_tag_humidity_set_event_handler(&humidity_tag_r2_0_40, humidity_tag_event_handler, &humidity_tag_r2_0_40_i2c);
-
-    static bc_tag_humidity_t humidity_tag_r2_0_41;
-    bc_tag_humidity_init(&humidity_tag_r2_0_41, BC_TAG_HUMIDITY_REVISION_R2, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_ALTERNATE);
-    bc_tag_humidity_set_update_interval(&humidity_tag_r2_0_41, UPDATE_INTERVAL);
-    static uint8_t humidity_tag_r2_0_41_i2c = (BC_I2C_I2C0 << 7) | 0x41;
-    bc_tag_humidity_set_event_handler(&humidity_tag_r2_0_41, humidity_tag_event_handler, &humidity_tag_r2_0_41_i2c);
-
-    static bc_tag_humidity_t humidity_tag_r1_0_5f;
-    bc_tag_humidity_init(&humidity_tag_r1_0_5f, BC_TAG_HUMIDITY_REVISION_R1, BC_I2C_I2C0, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
-    bc_tag_humidity_set_update_interval(&humidity_tag_r1_0_5f, UPDATE_INTERVAL);
-    static uint8_t humidity_tag_r1_0_5f_i2c = (BC_I2C_I2C0 << 7) | 0x5f;
-    bc_tag_humidity_set_event_handler(&humidity_tag_r1_0_5f, humidity_tag_event_handler, &humidity_tag_r1_0_5f_i2c);
-
-    static bc_tag_humidity_t humidity_tag_r3_1_40;
-    bc_tag_humidity_init(&humidity_tag_r3_1_40, BC_TAG_HUMIDITY_REVISION_R3, BC_I2C_I2C1, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
-    bc_tag_humidity_set_update_interval(&humidity_tag_r3_1_40, UPDATE_INTERVAL);
-    static uint8_t humidity_tag_r3_1_40_i2c = (BC_I2C_I2C1 << 7) | 0x40 | 0x0f; // 0x0f - hack
-    bc_tag_humidity_set_event_handler(&humidity_tag_r3_1_40, humidity_tag_event_handler, &humidity_tag_r3_1_40_i2c);
-
-    static bc_tag_humidity_t humidity_tag_r2_1_40;
-    bc_tag_humidity_init(&humidity_tag_r2_1_40, BC_TAG_HUMIDITY_REVISION_R2, BC_I2C_I2C1, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
-    bc_tag_humidity_set_update_interval(&humidity_tag_r2_1_40, UPDATE_INTERVAL);
-    static uint8_t humidity_tag_r2_1_40_i2c = (BC_I2C_I2C1 << 7) | 0x40;
-    bc_tag_humidity_set_event_handler(&humidity_tag_r2_1_40, humidity_tag_event_handler, &humidity_tag_r2_1_40_i2c);
-
-    static bc_tag_humidity_t humidity_tag_r2_1_41;
-    bc_tag_humidity_init(&humidity_tag_r2_1_41, BC_TAG_HUMIDITY_REVISION_R2, BC_I2C_I2C1, BC_TAG_HUMIDITY_I2C_ADDRESS_ALTERNATE);
-    bc_tag_humidity_set_update_interval(&humidity_tag_r2_1_41, UPDATE_INTERVAL);
-    static uint8_t humidity_tag_r2_1_41_i2c = (BC_I2C_I2C1 << 7) | 0x41;
-    bc_tag_humidity_set_event_handler(&humidity_tag_r2_1_41, humidity_tag_event_handler, &humidity_tag_r2_1_41_i2c);
-
-    static bc_tag_humidity_t humidity_tag_r1_1_5f;
-    bc_tag_humidity_init(&humidity_tag_r1_1_5f, BC_TAG_HUMIDITY_REVISION_R1, BC_I2C_I2C1, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
-    bc_tag_humidity_set_update_interval(&humidity_tag_r1_1_5f, UPDATE_INTERVAL);
-    static uint8_t humidity_tag_r1_1_5f_i2c = (BC_I2C_I2C1 << 7) | 0x5f;
-    bc_tag_humidity_set_event_handler(&humidity_tag_r1_1_5f, humidity_tag_event_handler, &humidity_tag_r1_1_5f_i2c);
-
-    //----------------------------
-
-    static bc_tag_lux_meter_t lux_meter_0_44;
-    bc_tag_lux_meter_init(&lux_meter_0_44, BC_I2C_I2C0, BC_TAG_LUX_METER_I2C_ADDRESS_DEFAULT);
-    bc_tag_lux_meter_set_update_interval(&lux_meter_0_44, UPDATE_INTERVAL);
-    static uint8_t lux_meter_0_44_i2c = (BC_I2C_I2C0 << 7) | BC_TAG_LUX_METER_I2C_ADDRESS_DEFAULT;
-    bc_tag_lux_meter_set_event_handler(&lux_meter_0_44, lux_meter_event_handler, &lux_meter_0_44_i2c);
-
-    static bc_tag_lux_meter_t lux_meter_0_45;
-    bc_tag_lux_meter_init(&lux_meter_0_45, BC_I2C_I2C0, BC_TAG_LUX_METER_I2C_ADDRESS_ALTERNATE);
-    bc_tag_lux_meter_set_update_interval(&lux_meter_0_45, UPDATE_INTERVAL);
-    static uint8_t lux_meter_0_45_i2c = (BC_I2C_I2C0 << 7) | BC_TAG_LUX_METER_I2C_ADDRESS_ALTERNATE;
-    bc_tag_lux_meter_set_event_handler(&lux_meter_0_45, lux_meter_event_handler, &lux_meter_0_45_i2c);
-
-    static bc_tag_lux_meter_t lux_meter_1_44;
-    bc_tag_lux_meter_init(&lux_meter_1_44, BC_I2C_I2C1, BC_TAG_LUX_METER_I2C_ADDRESS_DEFAULT);
-    bc_tag_lux_meter_set_update_interval(&lux_meter_1_44, UPDATE_INTERVAL);
-    static uint8_t lux_meter_1_44_i2c = (BC_I2C_I2C1 << 7) | BC_TAG_LUX_METER_I2C_ADDRESS_DEFAULT;
-    bc_tag_lux_meter_set_event_handler(&lux_meter_1_44, lux_meter_event_handler, &lux_meter_1_44_i2c);
-
-    static bc_tag_lux_meter_t lux_meter_1_45;
-    bc_tag_lux_meter_init(&lux_meter_1_45, BC_I2C_I2C1, BC_TAG_LUX_METER_I2C_ADDRESS_ALTERNATE);
-    bc_tag_lux_meter_set_update_interval(&lux_meter_1_45, UPDATE_INTERVAL);
-    static uint8_t lux_meter_1_45_i2c = (BC_I2C_I2C1 << 7) | BC_TAG_LUX_METER_I2C_ADDRESS_ALTERNATE;
-    bc_tag_lux_meter_set_event_handler(&lux_meter_1_45, lux_meter_event_handler, &lux_meter_1_45_i2c);
-
-    //----------------------------
-
-    static bc_tag_barometer_t barometer_tag_0;
-    bc_tag_barometer_init(&barometer_tag_0, BC_I2C_I2C0);
-    bc_tag_barometer_set_update_interval(&barometer_tag_0, UPDATE_INTERVAL);
-    static uint8_t barometer_tag_0_i2c = (BC_I2C_I2C0 << 7) | 0x60;
-    bc_tag_barometer_set_event_handler(&barometer_tag_0, barometer_tag_event_handler, &barometer_tag_0_i2c);
-
-    static bc_tag_barometer_t barometer_tag_1;
-    bc_tag_barometer_init(&barometer_tag_1, BC_I2C_I2C1);
-    bc_tag_barometer_set_update_interval(&barometer_tag_1, UPDATE_INTERVAL);
-    static uint8_t barometer_tag_1_i2c = (BC_I2C_I2C1 << 7) | 0x60;
-    bc_tag_barometer_set_event_handler(&barometer_tag_1, barometer_tag_event_handler, &barometer_tag_1_i2c);
+    sensors_init_all(&my_device_address);
 
     //----------------------------
 
@@ -346,7 +229,7 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
     }
     else if (event == BC_RADIO_EVENT_SCAN_FIND_DEVICE)
     {
-    	usb_talk_send_format("[\"/scan\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
+        usb_talk_send_format("[\"/scan\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
     }
 }
 
@@ -557,74 +440,6 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 
         }
     }
-}
-
-static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param)
-{
-    float value;
-
-    if (event != BC_TAG_TEMPERATURE_EVENT_UPDATE)
-    {
-        return;
-    }
-
-    if (bc_tag_temperature_get_temperature_celsius(self, &value))
-    {
-        usb_talk_publish_thermometer(&my_device_address, (uint8_t *) event_param, &value);
-    }
-}
-
-static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_event_t event, void *event_param)
-{
-    float value;
-
-    if (event != BC_TAG_HUMIDITY_EVENT_UPDATE)
-    {
-        return;
-    }
-
-    if (bc_tag_humidity_get_humidity_percentage(self, &value))
-    {
-        usb_talk_publish_humidity_sensor(&my_device_address, (uint8_t *) event_param, &value);
-    }
-}
-
-static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_event_t event, void *event_param)
-{
-    float value;
-
-    if (event != BC_TAG_LUX_METER_EVENT_UPDATE)
-    {
-        return;
-    }
-
-    if (bc_tag_lux_meter_get_illuminance_lux(self, &value))
-    {
-        usb_talk_publish_lux_meter(&my_device_address, (uint8_t *) event_param, &value);
-    }
-}
-
-static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_barometer_event_t event, void *event_param)
-{
-    float pascal;
-    float meter;
-
-    if (event != BC_TAG_BAROMETER_EVENT_UPDATE)
-    {
-        return;
-    }
-
-    if (!bc_tag_barometer_get_pressure_pascal(self, &pascal))
-    {
-        return;
-    }
-
-    if (!bc_tag_barometer_get_altitude_meter(self, &meter))
-    {
-        return;
-    }
-
-    usb_talk_publish_barometer(&my_device_address, (uint8_t *) event_param, &pascal, &meter);
 }
 
 void co2_event_handler(bc_module_co2_event_t event, void *event_param)
@@ -1095,6 +910,10 @@ static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload
 
 static void info_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
+    (void) device_address;
+    (void) param;
+    (void) payload;
+
     usb_talk_send_format("[\"/info\", {\"address\": \"" USB_TALK_DEVICE_ADDRESS "\", \"firmware\": \"bcf-usb-gateway\"}]\n", my_device_address);
 }
 
@@ -1158,38 +977,38 @@ static void nodes_purge(uint64_t *device_address, usb_talk_payload_t *payload, v
 
 static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) device_address;
+    (void) device_address;
     (void) payload;
-	(void) param;
+    (void) param;
 
-	bc_radio_scan_start();
+    bc_radio_scan_start();
 }
 
 static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) device_address;
+    (void) device_address;
     (void) payload;
-	(void) param;
+    (void) param;
 
-	bc_radio_scan_stop();
+    bc_radio_scan_stop();
 }
 
 static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) device_address;
+    (void) device_address;
     (void) payload;
-	(void) param;
+    (void) param;
 
-	bc_radio_automatic_pairing_start();
+    bc_radio_automatic_pairing_start();
 }
 
 static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
-	(void) device_address;
+    (void) device_address;
     (void) payload;
-	(void) param;
+    (void) param;
 
-	bc_radio_automatic_pairing_stop();
+    bc_radio_automatic_pairing_stop();
 }
 
 static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)

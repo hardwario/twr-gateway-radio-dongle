@@ -44,11 +44,17 @@ static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_
 static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void radio_node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void radio_node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
-static void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t));
+static void info_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void nodes_purge(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+
 static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state);
 static void _radio_pub_state_get(uint8_t type, uint64_t *device_address);
 
@@ -73,9 +79,15 @@ const usb_talk_subscribe_t subscribes[] = {
 	{"led-strip/-/compound/set", led_strip_compound_set, NULL},
 	{"led-strip/-/effect/set", led_strip_effect_set, NULL},
 	{"led-strip/-/thermometer/set", led_strip_thermometer_set, NULL},
-	{"radio/-/nodes/get", radio_nodes_get, NULL},
-	{"radio/-/node/add", radio_node_add, NULL},
-	{"radio/-/node/remove", radio_node_remove, NULL},
+	{"/info/get", info_get, NULL},
+	{"/nodes/get", nodes_get, NULL},
+	{"/node/add", node_add, NULL},
+	{"/node/remove", node_remove, NULL},
+	{"/nodes/purge", nodes_purge, NULL},
+	{"/scan/start", scan_start, NULL},
+	{"/scan/stop", scan_stop, NULL},
+	{"/automatic-pairing/start", automatic_pairing_start, NULL},
+	{"/automatic-pairing/stop", automatic_pairing_stop, NULL}
 };
 
 void application_init(void)
@@ -314,23 +326,27 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
     {
         bc_led_pulse(&led, 1000);
 
-        usb_talk_publish_radio(&my_device_address, "attach", &peer_device_address);
+        usb_talk_send_format("[\"/attach\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
     }
     else if (event == BC_RADIO_EVENT_ATTACH_FAILURE)
     {
         bc_led_pulse(&led, 5000);
 
-        usb_talk_publish_radio(&my_device_address, "attach-failure", &peer_device_address);
+        usb_talk_send_format("[\"/attach-failure\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
     }
     else if (event == BC_RADIO_EVENT_DETACH)
     {
         bc_led_pulse(&led, 1000);
 
-        usb_talk_publish_radio(&my_device_address, "detach", &peer_device_address);
+        usb_talk_send_format("[\"/detach\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
     }
     else if (event == BC_RADIO_EVENT_INIT_DONE)
     {
         my_device_address = bc_radio_get_device_address();
+    }
+    else if (event == BC_RADIO_EVENT_SCAN_FIND_DEVICE)
+    {
+    	usb_talk_send_format("[\"/scan\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
     }
 }
 
@@ -1077,47 +1093,26 @@ static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload
     bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
-static void radio_nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void info_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
+    usb_talk_send_format("[\"/info\", {\"address\": \"" USB_TALK_DEVICE_ADDRESS "\", \"firmware\": \"bcf-usb-gateway\"}]\n", my_device_address);
+}
+
+static void nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
     (void) param;
     (void) payload;
 
-    if (my_device_address != *device_address)
-    {
-        return;
-    }
+    uint64_t peer_devices_address[BC_RADIO_MAX_DEVICES];
 
-    uint64_t address[BC_RADIO_MAX_DEVICES];
+    bc_radio_get_peer_devices_address(peer_devices_address, BC_RADIO_MAX_DEVICES);
 
-    bc_radio_get_peer_devices_address(address, BC_RADIO_MAX_DEVICES);
-
-    usb_talk_publish_radio_nodes(&my_device_address, address, BC_RADIO_MAX_DEVICES);
-
+    usb_talk_publish_nodes(peer_devices_address, BC_RADIO_MAX_DEVICES);
 }
 
-static void radio_node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
-{
-    (void) param;
-    if (my_device_address != *device_address)
-    {
-        return;
-    }
 
-    _radio_node(payload, bc_radio_peer_device_add);
-}
-
-static void radio_node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
-{
-    (void) param;
-    if (my_device_address != *device_address)
-    {
-        return;
-    }
-
-    _radio_node(payload, bc_radio_peer_device_remove);
-}
-
-static void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t))
+void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t))
 {
     char tmp[13];
     size_t length = sizeof(tmp);
@@ -1136,6 +1131,65 @@ static void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t))
             call(device_address);
         }
     }
+}
+
+static void node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
+    (void) param;
+    _radio_node(payload, bc_radio_peer_device_add);
+}
+
+static void node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
+    (void) param;
+    _radio_node(payload, bc_radio_peer_device_remove);
+}
+
+static void nodes_purge(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
+    (void) payload;
+    (void) param;
+
+    bc_radio_peer_device_purge_all();
+}
+
+static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	(void) device_address;
+    (void) payload;
+	(void) param;
+
+	bc_radio_scan_start();
+}
+
+static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	(void) device_address;
+    (void) payload;
+	(void) param;
+
+	bc_radio_scan_stop();
+}
+
+static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	(void) device_address;
+    (void) payload;
+	(void) param;
+
+	bc_radio_automatic_pairing_start();
+}
+
+static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+	(void) device_address;
+    (void) payload;
+	(void) param;
+
+	bc_radio_automatic_pairing_stop();
 }
 
 static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)

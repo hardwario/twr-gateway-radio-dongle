@@ -2,9 +2,9 @@
 
 # Firmware for BigClown USB Gateway
 
-[![Travis](https://img.shields.io/travis/bigclownlabs/bcp-usb-gateway/master.svg)](https://travis-ci.org/bigclownlabs/bcp-usb-gateway)
-[![Release](https://img.shields.io/github/release/bigclownlabs/bcp-usb-gateway.svg)](https://github.com/bigclownlabs/bcp-usb-gateway/releases)
-[![License](https://img.shields.io/github/license/bigclownlabs/bcp-usb-gateway.svg)](https://github.com/bigclownlabs/bcp-usb-gateway/blob/master/LICENSE)
+[![Travis](https://img.shields.io/travis/bigclownlabs/bcf-usb-gateway/master.svg)](https://travis-ci.org/bigclownlabs/bcf-usb-gateway)
+[![Release](https://img.shields.io/github/release/bigclownlabs/bcf-usb-gateway.svg)](https://github.com/bigclownlabs/bcf-usb-gateway/releases)
+[![License](https://img.shields.io/github/license/bigclownlabs/bcf-usb-gateway.svg)](https://github.com/bigclownlabs/bcf-usb-gateway/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/BigClownLabs.svg?style=social&label=Follow)](https://twitter.com/BigClownLabs)
 
 This repository contains firmware for BigClown USB Gateway.
@@ -15,7 +15,7 @@ dfu-util -s 0x08000000:leave -d 0483:df11 -a 0 -D firmware.bin
 ```
 More information about dfu [here](https://doc.bigclown.com/core-module-flashing.html)
 
-Firmware for node is here [https://github.com/bigclownlabs/bcp-generic-node](https://github.com/bigclownlabs/bcp-generic-node)
+Firmware for node is here [https://github.com/bigclownlabs/bcf-generic-node](https://github.com/bigclownlabs/bcf-generic-node)
 
 ### MQTT
 

@@ -131,12 +131,8 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     ```
 
 #### Radio
-    Works, but it can change
-    ```
-    mosquitto_pub -t 'node/{id-gateway}/radio/-/nodes/get' -n
-    mosquitto_pub -t 'node/{id-gateway}/radio/-/node/add' -m '"836d1983184c"'
-    mosquitto_pub -t 'node/{id-gateway}/radio/-/node/remove' -m '"836d1983184c"'
-    ```
+  Read more here [bc-gateway](https://github.com/bigclownlabs/bch-usb-gateway)
+
 
 ## License
 

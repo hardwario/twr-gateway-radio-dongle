@@ -81,6 +81,22 @@ void usb_talk_send_string(const char *buffer)
 #endif
 }
 
+void usb_talk_send_format(const char *format, ...)
+{
+    va_list ap;
+    size_t length;
+
+    va_start(ap, format);
+    length = vsnprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer), format, ap);
+    va_end(ap);
+
+#if TALK_OVER_CDC
+    bc_usb_cdc_write(_usb_talk.tx_buffer, length);
+#else
+    bc_uart_async_write(_usb_talk.tx_buffer, length);
+#endif
+}
+
 void usb_talk_publish_bool(uint64_t *device_address, const char *subtopics, bool *value)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
@@ -293,33 +309,6 @@ void usb_talk_publish_encoder(uint64_t *device_address, int *increment)
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_radio(uint64_t *device_address, const char *event, uint64_t *peer_device_address)
-{
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-             "[\"%012llx/radio/%012llx/%s\", null]\n",
-             *device_address, *peer_device_address, event);
-
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
-}
-
-void usb_talk_publish_radio_nodes(uint64_t *device_address, uint64_t *peer_devices_address, int lenght)
-{
-    int offset = snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                 "[\"%012llx/radio/-/nodes\", [",
-                 *device_address);
-
-    for (int i = 0; i < lenght; i++)
-    {
-        offset += snprintf(_usb_talk.tx_buffer + offset, sizeof(_usb_talk.tx_buffer) - offset,
-                i == 0 ? "\"%012llx\"" : ", \"%012llx\"",
-                peer_devices_address[i]);
-    }
-
-    strncpy(_usb_talk.tx_buffer + offset, "]]\n", sizeof(_usb_talk.tx_buffer) - offset);
-
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
-}
-
 void usb_talk_publish_flood_detector(uint64_t *device_address, const char *number, bool *state)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
@@ -334,6 +323,30 @@ void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
             "[\"%012llx/accelerometer/-/acceleration\", [%0.2f,%0.2f,%0.2f]]\n",
             *device_address, *x_axis, *y_axis, *z_axis);
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
+void usb_talk_publish_nodes(uint64_t *peer_devices_address, int lenght)
+{
+    int offset = snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                 "[\"/nodes\", [" );
+    bool empty = true;
+    for (int i = 0; i < lenght; i++)
+    {
+        if (peer_devices_address[i] == 0)
+        {
+            continue;
+        }
+
+        offset += snprintf(_usb_talk.tx_buffer + offset, sizeof(_usb_talk.tx_buffer) - offset,
+                empty ? "\"%012llx\"" : ", \"%012llx\"",
+                peer_devices_address[i]);
+
+        empty = false;
+    }
+
+    strncpy(_usb_talk.tx_buffer + offset, "]]\n", sizeof(_usb_talk.tx_buffer) - offset);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }

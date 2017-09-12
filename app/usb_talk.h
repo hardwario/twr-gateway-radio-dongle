@@ -6,6 +6,7 @@
 #include <bc_module_relay.h>
 
 #define USB_TALK_INT_VALUE_NULL INT32_MIN
+#define USB_TALK_DEVICE_ADDRESS "%012llx"
 
 typedef struct
 {
@@ -27,6 +28,7 @@ typedef struct {
 void usb_talk_init(void);
 void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length);
 void usb_talk_send_string(const char *buffer);
+void usb_talk_send_format(const char *format, ...);
 
 void usb_talk_publish_bool(uint64_t *device_address, const char *subtopics, bool *value);
 void usb_talk_publish_int(uint64_t *device_address, const char *subtopics, int *value);
@@ -45,10 +47,10 @@ void usb_talk_publish_relay(uint64_t *device_address, bool *state);
 void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, bc_module_relay_state_t *state);
 void usb_talk_publish_led_strip_config(uint64_t *device_address, const char *mode, int *count);
 void usb_talk_publish_encoder(uint64_t *device_address, int *increment);
-void usb_talk_publish_radio(uint64_t *device_address, const char *event, uint64_t *peer_device_address);
-void usb_talk_publish_radio_nodes(uint64_t *device_address, uint64_t *peer_devices_address, int lenght);
 void usb_talk_publish_flood_detector(uint64_t *device_address, const char *number, bool *state);
 void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float *x_axis, float *y_axis, float *z_axis);
+void usb_talk_publish_nodes(uint64_t *peer_devices_address, int lenght);
+void usb_talk_publish_node(const char *event, uint64_t *peer_device_address);
 
 bool usb_talk_payload_get_bool(usb_talk_payload_t *payload, bool *value);
 bool usb_talk_payload_get_key_bool(usb_talk_payload_t *payload, const char *key, bool *value);

@@ -45,8 +45,8 @@ static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload
 static void info_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void nodes_purge(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void nodes_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void nodes_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
@@ -78,8 +78,8 @@ const usb_talk_subscribe_t subscribes[] = {
     {"led-strip/-/thermometer/set", led_strip_thermometer_set, NULL},
     {"/info/get", info_get, NULL},
     {"/nodes/get", nodes_get, NULL},
-    {"/node/add", node_add, NULL},
-    {"/node/remove", node_remove, NULL},
+    {"/nodes/add", nodes_add, NULL},
+    {"/nodes/remove", nodes_remove, NULL},
     {"/nodes/purge", nodes_purge, NULL},
     {"/scan/start", scan_start, NULL},
     {"/scan/stop", scan_stop, NULL},
@@ -952,14 +952,14 @@ void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t))
     }
 }
 
-static void node_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void nodes_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
     (void) device_address;
     (void) param;
     _radio_node(payload, bc_radio_peer_device_add);
 }
 
-static void node_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void nodes_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
     (void) device_address;
     (void) param;

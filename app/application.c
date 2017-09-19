@@ -10,6 +10,7 @@
 static uint64_t my_device_address;
 static bc_led_t led;
 static bool led_state;
+static bool radio_enrollment_mode;
 
 static struct
 {
@@ -49,6 +50,8 @@ static void nodes_add(uint64_t *device_address, usb_talk_payload_t *payload, voi
 static void nodes_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void enrollment_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
@@ -83,6 +86,8 @@ const usb_talk_subscribe_t subscribes[] = {
     {"/nodes/purge", nodes_purge, NULL},
     {"/scan/start", scan_start, NULL},
     {"/scan/stop", scan_stop, NULL},
+    {"/enrollment/start", enrollment_start, NULL},
+    {"/enrollment/stop", enrollment_stop, NULL},
     {"/automatic-pairing/start", automatic_pairing_start, NULL},
     {"/automatic-pairing/stop", automatic_pairing_stop, NULL}
 };
@@ -169,8 +174,17 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
     }
     else if (event == BC_BUTTON_EVENT_HOLD)
     {
-        bc_radio_enrollment_start();
-        bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
+        if (radio_enrollment_mode)
+        {
+            radio_enrollment_mode = false;
+            bc_radio_enrollment_stop();
+            bc_led_set_mode(&led, BC_LED_MODE_OFF);
+        }
+        else{
+            radio_enrollment_mode = true;
+            bc_radio_enrollment_start();
+            bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
+        }
     }
 }
 
@@ -200,8 +214,6 @@ static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event,
 static void radio_event_handler(bc_radio_event_t event, void *event_param)
 {
     (void) event_param;
-
-    bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
     uint64_t peer_device_address = bc_radio_get_event_device_address();
 
@@ -993,11 +1005,40 @@ static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, voi
     bc_radio_scan_stop();
 }
 
+
+static void enrollment_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
+    (void) payload;
+    (void) param;
+
+    radio_enrollment_mode = true;
+
+    bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
+
+    bc_radio_enrollment_start();
+}
+
+static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
+    (void) payload;
+    (void) param;
+
+    radio_enrollment_mode = false;
+
+    bc_led_set_mode(&led, BC_LED_MODE_OFF);
+
+    bc_radio_enrollment_stop();
+}
+
 static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
 {
     (void) device_address;
     (void) payload;
     (void) param;
+
+    bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
 
     bc_radio_automatic_pairing_start();
 }
@@ -1007,6 +1048,8 @@ static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t 
     (void) device_address;
     (void) payload;
     (void) param;
+
+    bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
     bc_radio_automatic_pairing_stop();
 }

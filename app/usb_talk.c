@@ -52,7 +52,7 @@ void usb_talk_init(void)
 #else
     bc_fifo_init(&_usb_talk.read_fifo, _usb_talk.read_fifo_buffer, sizeof(_usb_talk.read_fifo_buffer));
     bc_fifo_init(&_usb_talk.write_fifo, _usb_talk.write_fifo_buffer, sizeof(_usb_talk.write_fifo_buffer));
-    bc_uart_init(BC_UART_UART2, BC_UART_BAUDRATE_9600, BC_UART_SETTING_8N1);
+    bc_uart_init(BC_UART_UART2, BC_UART_BAUDRATE_115200, BC_UART_SETTING_8N1);
     bc_uart_set_async_fifo(BC_UART_UART2, &_usb_talk.write_fifo, &_usb_talk.read_fifo);
 #endif
 }

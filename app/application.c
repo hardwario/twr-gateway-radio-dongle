@@ -285,6 +285,14 @@ void bc_radio_on_co2(uint64_t *peer_device_address, float *concentration)
     usb_talk_publish_co2_concentation(peer_device_address, concentration);
 }
 
+void bc_radio_on_battery(uint64_t *peer_device_address, uint8_t *format, float *voltage)
+{
+    usb_talk_send_format("[\"%012llx/battery/%s/voltage\", %.2f]\n",
+            *peer_device_address,
+            *format == 0 ? "standard" : "mini",
+            *voltage);
+}
+
 void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *length)
 {
     if (*length < 1)

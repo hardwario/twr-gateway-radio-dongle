@@ -2,3 +2,4 @@
 /out/
 .gitmodules
 .DS_Store
+*.bin

@@ -469,7 +469,7 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
 
     if (event == BC_MODULE_CO2_EVENT_UPDATE)
     {
-        if (bc_module_co2_get_concentration(&value))
+        if (bc_module_co2_get_concentration_ppm(&value))
         {
             usb_talk_publish_co2_concentation(&my_device_address, &value);
         }

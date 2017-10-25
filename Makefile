@@ -2,6 +2,7 @@ SDK_DIR ?= sdk
 
 CFLAGS += -D'BC_SCHEDULER_MAX_TASKS=64'
 CFLAGS += -D'BC_RADIO_MAX_DEVICES=16'
+CFLAGS += -D'FIRMWARE="$(OUT)"'
 
 -include sdk/Makefile.mk
 

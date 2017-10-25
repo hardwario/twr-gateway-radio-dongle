@@ -9,7 +9,8 @@ addons:
     packages:
     - gcc-arm-embedded
 
-script: ./build.sh
+script:
+    - make release OUT=bcf-usb-gateway-${TRAVIS_TAG}
 
 deploy:
     skip_cleanup: true

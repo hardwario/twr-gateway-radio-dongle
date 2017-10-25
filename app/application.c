@@ -462,6 +462,11 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
     }
 }
 
+void bc_radio_on_info(uint64_t *peer_device_address, char *firmware)
+{
+    usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\"} ]\n", *peer_device_address, firmware);
+}
+
 void co2_event_handler(bc_module_co2_event_t event, void *event_param)
 {
     (void) event_param;
@@ -934,7 +939,7 @@ static void info_get(uint64_t *device_address, usb_talk_payload_t *payload, void
     (void) param;
     (void) payload;
 
-    usb_talk_send_format("[\"/info\", {\"address\": \"" USB_TALK_DEVICE_ADDRESS "\", \"firmware\": \"bcf-usb-gateway\"}]\n", my_device_address);
+    usb_talk_send_format("[\"/info\", {\"id\": \"" USB_TALK_DEVICE_ADDRESS "\", \"firmware\": \"" FIRMWARE "\"}]\n", my_device_address);
 }
 
 static void nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)

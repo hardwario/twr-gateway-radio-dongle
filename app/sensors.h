@@ -20,6 +20,10 @@
 #define BAROMETER_TAG_PUB_VALUE_CHANGE 10.0f
 #define BAROMETER_TAG_UPDATE_INTERVAL (1 * 1000)
 
+#define CO2_PUB_NO_CHANGE_INTERVAL (5 * 60 * 1000)
+#define CO2_PUB_VALUE_CHANGE 50.0f
+#define CO2_UPDATE_INTERVAL (15 * 1000)
+
 typedef struct
 {
     uint8_t number;
@@ -65,5 +69,9 @@ void humidity_tag_init(bc_tag_humidity_revision_t revision, bc_i2c_channel_t i2c
 void lux_meter_tag_init(bc_i2c_channel_t i2c_channel, bc_tag_lux_meter_i2c_address_t i2c_address, lux_meter_tag_t *tag);
 
 void barometer_tag_init(bc_i2c_channel_t i2c_channel, barometer_tag_t *tag);
+
+void co2_module_init(void);
+
+void pir_module_init(void);
 
 #endif

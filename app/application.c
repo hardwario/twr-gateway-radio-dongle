@@ -25,8 +25,6 @@ static bc_module_relay_t relay_0_1;
 static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
 static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
 static void radio_event_handler(bc_radio_event_t event, void *event_param);
-static void co2_event_handler(bc_module_co2_event_t event, void *event_param);
-static void pir_event_handler(bc_module_pir_t *self, bc_module_pir_event_t event, void*event_param);
 
 static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
@@ -128,20 +126,8 @@ void application_init(void)
 
     //----------------------------
 
-    bc_module_co2_init();
-    bc_module_co2_set_update_interval(30000);
-    bc_module_co2_set_event_handler(co2_event_handler, NULL);
-
-    //----------------------------
-
     bc_module_relay_init(&relay_0_0, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
     bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
-
-    //----------------------------
-
-    static bc_module_pir_t pir;
-    bc_module_pir_init(&pir);
-    bc_module_pir_set_event_handler(&pir, pir_event_handler, NULL);
 
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
     led_state = false;
@@ -465,33 +451,6 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 void bc_radio_on_info(uint64_t *peer_device_address, char *firmware)
 {
     usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\"} ]\n", *peer_device_address, firmware);
-}
-
-void co2_event_handler(bc_module_co2_event_t event, void *event_param)
-{
-    (void) event_param;
-    float value;
-
-    if (event == BC_MODULE_CO2_EVENT_UPDATE)
-    {
-        if (bc_module_co2_get_concentration_ppm(&value))
-        {
-            usb_talk_publish_co2_concentation(&my_device_address, &value);
-        }
-    }
-}
-
-static void pir_event_handler(bc_module_pir_t *self, bc_module_pir_event_t event, void*event_param)
-{
-    (void) self;
-    (void) event_param;
-
-    if (event == BC_MODULE_PIR_EVENT_MOTION)
-    {
-        static uint16_t event_count = 0;
-        event_count++;
-        usb_talk_publish_event_count(&my_device_address, "pir", &event_count);
-    }
 }
 
 static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)

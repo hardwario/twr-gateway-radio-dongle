@@ -60,6 +60,12 @@ void sensors_init_all(uint64_t *my_device_address)
 
 	static barometer_tag_t barometer_tag_1_0;
 	barometer_tag_init(BC_I2C_I2C1, &barometer_tag_1_0);
+
+	//----------------------------
+
+	co2_module_init();
+
+	pir_module_init();
 }
 
 static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param)
@@ -227,5 +233,52 @@ void barometer_tag_init(bc_i2c_channel_t i2c_channel, barometer_tag_t *tag)
     bc_tag_barometer_set_update_interval(&tag->self, BAROMETER_TAG_UPDATE_INTERVAL);
 
     bc_tag_barometer_set_event_handler(&tag->self, barometer_tag_event_handler, &tag->param);
+}
+
+void co2_event_handler(bc_module_co2_event_t event, void *event_param)
+{
+    event_param_t *param = (event_param_t *) event_param;
+    float value;
+
+    if (event == BC_MODULE_CO2_EVENT_UPDATE)
+    {
+        if (bc_module_co2_get_concentration_ppm(&value))
+        {
+            if ((fabs(value - param->value) >= CO2_PUB_VALUE_CHANGE) || (param->next_pub < bc_scheduler_get_spin_tick()))
+            {
+                usb_talk_publish_co2_concentation(_device_address, &value);
+                param->value = value;
+                param->next_pub = bc_scheduler_get_spin_tick() + CO2_PUB_NO_CHANGE_INTERVAL;
+            }
+        }
+    }
+}
+
+void co2_module_init(void)
+{
+    static event_param_t event_param = { .next_pub = 0 };
+    bc_module_co2_init();
+    bc_module_co2_set_update_interval(CO2_UPDATE_INTERVAL);
+    bc_module_co2_set_event_handler(co2_event_handler, &event_param);
+}
+
+static void pir_event_handler(bc_module_pir_t *self, bc_module_pir_event_t event, void*event_param)
+{
+    (void) self;
+    (void) event_param;
+
+    if (event == BC_MODULE_PIR_EVENT_MOTION)
+    {
+        static uint16_t event_count = 0;
+        event_count++;
+        usb_talk_publish_event_count(_device_address, "pir", &event_count);
+    }
+}
+
+void pir_module_init(void)
+{
+    static bc_module_pir_t pir;
+    bc_module_pir_init(&pir);
+    bc_module_pir_set_event_handler(&pir, pir_event_handler, NULL);
 }
 

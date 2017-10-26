@@ -1,10 +1,11 @@
 #include <application.h>
-#include <usb_talk.h>
 #include <bc_device_id.h>
 #include <radio.h>
+#include <usb_talk.h>
+#if CORE_MODULE
 #include <sensors.h>
+#endif
 
-#define UPDATE_INTERVAL 5000
 #define APPLICATION_TASK_ID 0
 
 static uint64_t my_device_address;
@@ -12,11 +13,11 @@ static bc_led_t led;
 static bool led_state;
 static bool radio_enrollment_mode;
 
+#if CORE_MODULE
 static struct
 {
     bc_tick_t next_update;
     bool mqtt;
-
 } lcd;
 
 static bc_module_relay_t relay_0_0;
@@ -24,8 +25,9 @@ static bc_module_relay_t relay_0_1;
 
 static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
 static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
-static void radio_event_handler(bc_radio_event_t event, void *event_param);
+#endif
 
+static void radio_event_handler(bc_radio_event_t event, void *event_param);
 static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void led_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void relay_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
@@ -53,8 +55,8 @@ static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payloa
 static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
-static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state);
-static void _radio_pub_state_get(uint8_t type, uint64_t *device_address);
+static void radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state);
+static void radio_pub_state_get(uint8_t type, uint64_t *device_address);
 
 static uint8_t relay_0_number = 0;
 static uint8_t relay_1_number = 1;
@@ -92,7 +94,7 @@ const usb_talk_subscribe_t subscribes[] = {
 
 void application_init(void)
 {
-    bc_led_init(&led, BC_GPIO_LED, false, false);
+    bc_led_init(&led, GPIO_LED, false, false);
     bc_led_set_mode(&led, BC_LED_MODE_ON);
 
     usb_talk_init();
@@ -102,6 +104,7 @@ void application_init(void)
     bc_radio_set_event_handler(radio_event_handler, NULL);
     bc_radio_listen();
 
+#if CORE_MODULE
     bc_module_power_init();
 
     memset(&lcd, 0, sizeof(lcd));
@@ -124,77 +127,12 @@ void application_init(void)
 
     sensors_init_all(&my_device_address);
 
-    //----------------------------
-
     bc_module_relay_init(&relay_0_0, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
     bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
+#endif
 
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
     led_state = false;
-}
-
-void application_task(void)
-{
-    bc_tick_t now = bc_tick_get();
-    if (lcd.next_update < now)
-    {
-        bc_module_lcd_update();
-        lcd.next_update = now + 500;
-    }
-
-    bc_scheduler_plan_current_relative(500);
-}
-
-static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
-{
-    (void) self;
-    (void) event_param;
-
-    if (event == BC_BUTTON_EVENT_PRESS)
-    {
-        static uint16_t event_count = 0;
-        usb_talk_publish_push_button(&my_device_address, "-", &event_count);
-        event_count++;
-        bc_led_set_mode(&led, BC_LED_MODE_OFF);
-        bc_led_pulse(&led, 100);
-    }
-    else if (event == BC_BUTTON_EVENT_HOLD)
-    {
-        if (radio_enrollment_mode)
-        {
-            radio_enrollment_mode = false;
-            bc_radio_enrollment_stop();
-            bc_led_set_mode(&led, BC_LED_MODE_OFF);
-        }
-        else{
-            radio_enrollment_mode = true;
-            bc_radio_enrollment_start();
-            bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
-        }
-    }
-}
-
-static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
-{
-    (void) event_param;
-
-    if (event != BC_BUTTON_EVENT_CLICK)
-    {
-        return;
-    }
-
-    if (self->_channel.virtual_channel == BC_MODULE_LCD_BUTTON_LEFT)
-    {
-        static uint16_t event_left_count = 0;
-        usb_talk_publish_push_button(&my_device_address, "lcd:left", &event_left_count);
-        event_left_count++;
-    }
-    else
-    {
-        static uint16_t event_right_count = 0;
-        usb_talk_publish_push_button(&my_device_address, "lcd:right", &event_right_count);
-        event_right_count++;
-    }
 }
 
 static void radio_event_handler(bc_radio_event_t event, void *event_param)
@@ -473,7 +411,7 @@ static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload,
     }
     else
     {
-        _radio_pub_state_set(RADIO_LED_SET, device_address, state);
+        radio_pub_state_set(RADIO_LED_SET, device_address, state);
     }
 }
 
@@ -488,7 +426,7 @@ static void led_state_get(uint64_t *device_address, usb_talk_payload_t *payload,
     }
     else
     {
-        _radio_pub_state_get(RADIO_LED_GET, device_address);
+        radio_pub_state_get(RADIO_LED_GET, device_address);
     }
 }
 
@@ -510,7 +448,7 @@ static void relay_state_set(uint64_t *device_address, usb_talk_payload_t *payloa
     }
     else
     {
-        _radio_pub_state_set(RADIO_RELAY_POWER_SET, device_address, state);
+        radio_pub_state_set(RADIO_RELAY_POWER_SET, device_address, state);
     }
 }
 
@@ -527,7 +465,7 @@ static void relay_state_get(uint64_t *device_address, usb_talk_payload_t *payloa
     }
     else
     {
-        _radio_pub_state_get(RADIO_RELAY_POWER_GET, device_address);
+        radio_pub_state_get(RADIO_RELAY_POWER_GET, device_address);
     }
 
 }
@@ -544,16 +482,18 @@ static void module_relay_state_set(uint64_t *device_address, usb_talk_payload_t 
         return;
     }
 
-    if (my_device_address == *device_address)
+    if (my_device_address != *device_address)
+    {
+        radio_pub_state_set(*number == 0 ? RADIO_RELAY_0_SET : RADIO_RELAY_1_SET, device_address, state);
+    }
+#if CORE_MODULE
+    else
     {
         bc_module_relay_set_state(*number == 0 ? &relay_0_0 : &relay_0_1, state);
         bc_module_relay_state_t relay_state = state ? BC_MODULE_RELAY_STATE_TRUE : BC_MODULE_RELAY_STATE_FALSE;
         usb_talk_publish_module_relay(&my_device_address, number, &relay_state);
     }
-    else
-    {
-        _radio_pub_state_set(*number == 0 ? RADIO_RELAY_0_SET : RADIO_RELAY_1_SET, device_address, state);
-    }
+#endif
 }
 
 static void module_relay_pulse(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -573,11 +513,7 @@ static void module_relay_pulse(uint64_t *device_address, usb_talk_payload_t *pay
         direction = true;
     }
 
-    if (my_device_address == *device_address)
-    {
-        bc_module_relay_pulse(*number == 0 ? &relay_0_0 : &relay_0_1, direction, duration);
-    }
-    else
+    if (my_device_address != *device_address)
     {
         uint8_t buffer[1 + sizeof(uint64_t) + 1 + 4]; // HEAD + ADDRESS + DIRECTION + DURATION(4)
         buffer[0] = (*number == 0) ? RADIO_RELAY_0_PULSE_SET : RADIO_RELAY_1_PULSE_SET;
@@ -587,6 +523,12 @@ static void module_relay_pulse(uint64_t *device_address, usb_talk_payload_t *pay
 
         bc_radio_pub_buffer(buffer, sizeof(buffer));
     }
+#if CORE_MODULE
+    else
+    {
+        bc_module_relay_pulse(*number == 0 ? &relay_0_0 : &relay_0_1, direction, duration);
+    }
+#endif
 }
 
 static void module_relay_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -596,16 +538,16 @@ static void module_relay_state_get(uint64_t *device_address, usb_talk_payload_t 
 
     if (my_device_address == *device_address)
     {
-
+        radio_pub_state_get(*number == 0 ? RADIO_RELAY_0_GET : RADIO_RELAY_1_GET, device_address);
+    }
+#if CORE_MODULE
+    else
+    {
         bc_module_relay_state_t state = bc_module_relay_get_state(*number == 0 ? &relay_0_0 : &relay_0_1);
 
         usb_talk_publish_module_relay(&my_device_address, number, &state);
     }
-    else
-    {
-        _radio_pub_state_get(*number == 0 ? RADIO_RELAY_0_GET : RADIO_RELAY_1_GET, device_address);
-    }
-
+#endif
 }
 
 static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -633,12 +575,6 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
         return;
     }
 
-    if (!lcd.mqtt)
-    {
-        bc_module_lcd_clear();
-        lcd.mqtt = true;
-    }
-
     if (!usb_talk_payload_get_key_int(payload, "font", &font_size))
     {
         font_size = 15;
@@ -651,6 +587,13 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
 
     if (my_device_address == *device_address)
     {
+#if CORE_MODULE
+        if (!lcd.mqtt)
+        {
+            bc_module_lcd_clear();
+            lcd.mqtt = true;
+        }
+
         switch (font_size)
         {
             case 11:
@@ -691,6 +634,7 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
         }
 
         bc_module_lcd_draw_string(x, y, text, color);
+#endif
     }
     else
     {
@@ -713,17 +657,19 @@ static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *paylo
     (void) payload;
     (void) param;
 
-    if (my_device_address == *device_address)
-    {
-        bc_module_lcd_clear();
-    }
-    else
+    if (my_device_address != *device_address)
     {
         uint8_t buffer[1 + sizeof(uint64_t)];
         buffer[0] = RADIO_LCD_SCREEN_CLEAR;
         memcpy(buffer + 1, device_address, sizeof(uint64_t));
         bc_radio_pub_buffer(buffer, sizeof(buffer));
     }
+#if CORE_MODULE
+    else
+    {
+        bc_module_lcd_clear();
+    }
+#endif
 }
 
 static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -1026,7 +972,7 @@ static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t 
     bc_radio_automatic_pairing_stop();
 }
 
-static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)
+static void radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)
 {
     uint8_t buffer[1 + sizeof(uint64_t) + 1];
 
@@ -1037,7 +983,7 @@ static void _radio_pub_state_set(uint8_t type, uint64_t *device_address, bool st
     bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
-static void _radio_pub_state_get(uint8_t type, uint64_t *device_address)
+static void radio_pub_state_get(uint8_t type, uint64_t *device_address)
 {
     uint8_t buffer[1 + sizeof(uint64_t)];
 
@@ -1046,3 +992,69 @@ static void _radio_pub_state_get(uint8_t type, uint64_t *device_address)
 
     bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
+
+#if CORE_MODULE
+void application_task(void)
+{
+    bc_tick_t now = bc_tick_get();
+    if (lcd.next_update < now)
+    {
+        bc_module_lcd_update();
+        lcd.next_update = now + 500;
+    }
+
+    bc_scheduler_plan_current_relative(500);
+}
+
+static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
+{
+    (void) self;
+    (void) event_param;
+
+    if (event == BC_BUTTON_EVENT_PRESS)
+    {
+        static uint16_t event_count = 0;
+        usb_talk_publish_push_button(&my_device_address, "-", &event_count);
+        event_count++;
+        bc_led_set_mode(&led, BC_LED_MODE_OFF);
+        bc_led_pulse(&led, 100);
+    }
+    else if (event == BC_BUTTON_EVENT_HOLD)
+    {
+        if (radio_enrollment_mode)
+        {
+            radio_enrollment_mode = false;
+            bc_radio_enrollment_stop();
+            bc_led_set_mode(&led, BC_LED_MODE_OFF);
+        }
+        else{
+            radio_enrollment_mode = true;
+            bc_radio_enrollment_start();
+            bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
+        }
+    }
+}
+
+static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
+{
+    (void) event_param;
+
+    if (event != BC_BUTTON_EVENT_CLICK)
+    {
+        return;
+    }
+
+    if (self->_channel.virtual_channel == BC_MODULE_LCD_BUTTON_LEFT)
+    {
+        static uint16_t event_left_count = 0;
+        usb_talk_publish_push_button(&my_device_address, "lcd:left", &event_left_count);
+        event_left_count++;
+    }
+    else
+    {
+        static uint16_t event_right_count = 0;
+        usb_talk_publish_push_button(&my_device_address, "lcd:right", &event_right_count);
+        event_right_count++;
+    }
+}
+#endif

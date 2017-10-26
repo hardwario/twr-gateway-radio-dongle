@@ -14,7 +14,7 @@
 
 static struct
 {
-    char tx_buffer[320];
+    char tx_buffer[512];
     char rx_buffer[1024];
     size_t rx_length;
     bool rx_error;
@@ -26,7 +26,7 @@ static struct
 #else
     uint8_t read_fifo_buffer[1024];
     bc_fifo_t read_fifo;
-    uint8_t write_fifo_buffer[320];
+    uint8_t write_fifo_buffer[512];
     bc_fifo_t write_fifo;
 #endif
 
@@ -340,7 +340,7 @@ void usb_talk_publish_nodes(uint64_t *peer_devices_address, int lenght)
         }
 
         offset += snprintf(_usb_talk.tx_buffer + offset, sizeof(_usb_talk.tx_buffer) - offset,
-                empty ? "\"%012llx\"" : ", \"%012llx\"",
+                empty ? "\"%012llx\"" : ",\"%012llx\"",
                 peer_devices_address[i]);
 
         empty = false;

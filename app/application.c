@@ -165,18 +165,22 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
     }
     else if (event == BC_RADIO_EVENT_SCAN_FIND_DEVICE)
     {
-        usb_talk_send_format("[\"/scan\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
+        usb_talk_send_format("[\"/found\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
     }
 }
 
 void bc_radio_on_push_button(uint64_t *peer_device_address, uint16_t *event_count)
 {
+    bc_led_pulse(&led, 10);
+
     usb_talk_publish_push_button(peer_device_address, "-", event_count);
 }
 
 void bc_radio_on_thermometer(uint64_t *peer_device_address, uint8_t *i2c, float *temperature)
 {
     (void) peer_device_address;
+
+    bc_led_pulse(&led, 10);
 
     usb_talk_publish_thermometer(peer_device_address, i2c, temperature);
 }
@@ -185,12 +189,16 @@ void bc_radio_on_humidity(uint64_t *peer_device_address, uint8_t *i2c, float *pe
 {
     (void) peer_device_address;
 
+    bc_led_pulse(&led, 10);
+
     usb_talk_publish_humidity_sensor(peer_device_address, i2c, percentage);
 }
 
 void bc_radio_on_lux_meter(uint64_t *peer_device_address, uint8_t *i2c, float *illuminance)
 {
     (void) peer_device_address;
+
+    bc_led_pulse(&led, 10);
 
     usb_talk_publish_lux_meter(peer_device_address, i2c, illuminance);
 }
@@ -199,6 +207,8 @@ void bc_radio_on_barometer(uint64_t *peer_device_address, uint8_t *i2c, float *p
 {
     (void) peer_device_address;
 
+    bc_led_pulse(&led, 10);
+
     usb_talk_publish_barometer(peer_device_address, i2c, pressure, altitude);
 }
 
@@ -206,11 +216,15 @@ void bc_radio_on_co2(uint64_t *peer_device_address, float *concentration)
 {
     (void) peer_device_address;
 
+    bc_led_pulse(&led, 10);
+
     usb_talk_publish_co2_concentation(peer_device_address, concentration);
 }
 
 void bc_radio_on_battery(uint64_t *peer_device_address, uint8_t *format, float *voltage)
 {
+    bc_led_pulse(&led, 10);
+
     usb_talk_send_format("[\"%012llx/battery/%s/voltage\", %.2f]\n",
             *peer_device_address,
             *format == 0 ? "standard" : "mini",
@@ -223,6 +237,8 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
     {
         return;
     }
+
+    bc_led_pulse(&led, 10);
 
     switch (buffer[0]) {
         case RADIO_USER_TOPIC_BOOL:
@@ -388,6 +404,8 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 
 void bc_radio_on_info(uint64_t *peer_device_address, char *firmware)
 {
+    bc_led_pulse(&led, 10);
+
     usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\"} ]\n", *peer_device_address, firmware);
 }
 
@@ -903,6 +921,8 @@ static void nodes_purge(uint64_t *device_address, usb_talk_payload_t *payload, v
     (void) param;
 
     bc_radio_peer_device_purge_all();
+
+    nodes_get(device_address, payload, param);
 }
 
 static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -912,6 +932,8 @@ static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, vo
     (void) param;
 
     bc_radio_scan_start();
+
+    usb_talk_send_string("[\"/scan\", \"start\"]\n");
 }
 
 static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -921,6 +943,8 @@ static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, voi
     (void) param;
 
     bc_radio_scan_stop();
+
+    usb_talk_send_string("[\"/scan\", \"stop\"]\n");
 }
 
 
@@ -935,6 +959,8 @@ static void enrollment_start(uint64_t *device_address, usb_talk_payload_t *paylo
     bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
 
     bc_radio_enrollment_start();
+
+    usb_talk_send_string("[\"/enrollment\", \"start\"]\n");
 }
 
 static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -948,6 +974,8 @@ static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payloa
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
     bc_radio_enrollment_stop();
+
+    usb_talk_send_string("[\"/enrollment\", \"stop\"]\n");
 }
 
 static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -959,6 +987,8 @@ static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t
     bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
 
     bc_radio_automatic_pairing_start();
+
+    usb_talk_send_string("[\"/automatic-pairing\", \"stop\"]\n");
 }
 
 static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
@@ -970,6 +1000,8 @@ static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t 
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
     bc_radio_automatic_pairing_stop();
+
+    usb_talk_send_string("[\"/automatic-pairing\", \"stop\"]\n");
 }
 
 static void radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)
@@ -1016,7 +1048,6 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
         static uint16_t event_count = 0;
         usb_talk_publish_push_button(&my_device_address, "-", &event_count);
         event_count++;
-        bc_led_set_mode(&led, BC_LED_MODE_OFF);
         bc_led_pulse(&led, 100);
     }
     else if (event == BC_BUTTON_EVENT_HOLD)
@@ -1026,11 +1057,13 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
             radio_enrollment_mode = false;
             bc_radio_enrollment_stop();
             bc_led_set_mode(&led, BC_LED_MODE_OFF);
+            usb_talk_send_string("[\"/enrollment\", \"stop\"]\n");
         }
         else{
             radio_enrollment_mode = true;
             bc_radio_enrollment_start();
             bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
+            usb_talk_send_string("[\"/enrollment\", \"start\"]\n");
         }
     }
 }

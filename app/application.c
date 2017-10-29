@@ -2,6 +2,7 @@
 #include <bc_device_id.h>
 #include <radio.h>
 #include <usb_talk.h>
+#include <eeprom.h>
 #if CORE_MODULE
 #include <sensors.h>
 #endif
@@ -55,6 +56,10 @@ static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payloa
 static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
 
+static void alias_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void alias_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void alias_list(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+
 static void radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state);
 static void radio_pub_state_get(uint8_t type, uint64_t *device_address);
 
@@ -89,13 +94,18 @@ const usb_talk_subscribe_t subscribes[] = {
     {"/enrollment/start", enrollment_start, NULL},
     {"/enrollment/stop", enrollment_stop, NULL},
     {"/automatic-pairing/start", automatic_pairing_start, NULL},
-    {"/automatic-pairing/stop", automatic_pairing_stop, NULL}
+    {"/automatic-pairing/stop", automatic_pairing_stop, NULL},
+    {"$eeprom/alias/add", alias_add, NULL},
+    {"$eeprom/alias/remove", alias_remove, NULL},
+    {"$eeprom/alias/list", alias_list, NULL}
 };
 
 void application_init(void)
 {
     bc_led_init(&led, GPIO_LED, false, false);
     bc_led_set_mode(&led, BC_LED_MODE_ON);
+
+    eeprom_init();
 
     usb_talk_init();
     usb_talk_subscribes(subscribes, sizeof(subscribes) / sizeof(usb_talk_subscribe_t));
@@ -145,19 +155,19 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
     {
         bc_led_pulse(&led, 1000);
 
-        usb_talk_send_format("[\"/attach\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
+        usb_talk_send_format("[\"/attach\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", peer_device_address);
     }
     else if (event == BC_RADIO_EVENT_ATTACH_FAILURE)
     {
         bc_led_pulse(&led, 5000);
 
-        usb_talk_send_format("[\"/attach-failure\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
+        usb_talk_send_format("[\"/attach-failure\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", peer_device_address);
     }
     else if (event == BC_RADIO_EVENT_DETACH)
     {
         bc_led_pulse(&led, 1000);
 
-        usb_talk_send_format("[\"/detach\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
+        usb_talk_send_format("[\"/detach\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", peer_device_address);
     }
     else if (event == BC_RADIO_EVENT_INIT_DONE)
     {
@@ -165,7 +175,7 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
     }
     else if (event == BC_RADIO_EVENT_SCAN_FIND_DEVICE)
     {
-        usb_talk_send_format("[\"/found\", \"" USB_TALK_DEVICE_ADDRESS "\" ]\n", peer_device_address);
+        usb_talk_send_format("[\"/found\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", peer_device_address);
     }
 }
 
@@ -576,7 +586,7 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
     int y;
     int font_size;
     bool color;
-    char text[32];
+    char text[33];
     size_t length = sizeof(text);
 
     memset(text, 0, length);
@@ -800,7 +810,7 @@ static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *p
 
     if (type > RADIO_LED_STRIP_EFFECT_TYPE_THEATER_CHASE_RAINBOW)
     {
-        char str[12];
+        char str[13];
         size_t length = sizeof(str);
         if (!usb_talk_payload_get_key_string(payload, "color", str, &length))
         {
@@ -1002,6 +1012,59 @@ static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t 
     bc_radio_automatic_pairing_stop();
 
     usb_talk_send_string("[\"/automatic-pairing\", \"stop\"]\n");
+}
+
+static void alias_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
+    (void) param;
+
+    uint64_t id;
+
+    if (!usb_talk_payload_get_key_node_id(payload, "id", &id))
+    {
+        return;
+    }
+
+    char name[EEPROM_ALIAS_NAME_LENGTH + 1];
+    size_t length = sizeof(name);
+
+    if (!usb_talk_payload_get_key_string(payload, "name", name, &length))
+    {
+        return;
+    }
+
+    eeprom_alias_add(&id, name);
+}
+
+static void alias_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
+    (void) param;
+
+    uint64_t id;
+
+    if (!usb_talk_payload_get_node_id(payload, &id))
+    {
+        return;
+    }
+
+    eeprom_alias_remove(&id);
+}
+
+static void alias_list(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+{
+    (void) device_address;
+    (void) param;
+
+    int page;
+
+    if (!usb_talk_payload_get_int(payload, &page))
+    {
+        return;
+    }
+
+    eeprom_alias_list(page);
 }
 
 static void radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)

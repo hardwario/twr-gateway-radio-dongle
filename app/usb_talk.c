@@ -17,6 +17,7 @@ static struct
     char tx_buffer[512];
     char rx_buffer[1024];
     size_t rx_length;
+    size_t tx_length;
     bool rx_error;
 
     const usb_talk_subscribe_t *subscribes;
@@ -42,6 +43,7 @@ static void _usb_talk_process_message(char *message, size_t length);
 static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *value);
 static bool _usb_talk_token_get_float(const char *buffer, jsmntok_t *token, float *value);
 static bool _usb_talk_token_get_string(const char *buffer, jsmntok_t *token, char *str, size_t *length);
+static bool _usb_talk_payload_get_node_id(const char *buffer, jsmntok_t *token, uint64_t *value);
 
 void usb_talk_init(void)
 {
@@ -94,6 +96,48 @@ void usb_talk_send_format(const char *format, ...)
     bc_usb_cdc_write(_usb_talk.tx_buffer, length);
 #else
     bc_uart_async_write(BC_UART_UART2, _usb_talk.tx_buffer, length);
+#endif
+}
+
+
+void usb_talk_message_start(const char *topic, ...)
+{
+    va_list ap;
+
+    va_start(ap, topic);
+
+    strcpy(_usb_talk.tx_buffer, "[\"");
+
+    _usb_talk.tx_length = 2 + vsnprintf(_usb_talk.tx_buffer + 2, sizeof(_usb_talk.tx_buffer), topic, ap);
+
+    strcpy(_usb_talk.tx_buffer + _usb_talk.tx_length, "\", ");
+
+    _usb_talk.tx_length += 3;
+
+    va_end(ap);
+}
+
+void usb_talk_message_append(const char *format, ...)
+{
+    va_list ap;
+
+    va_start(ap, format);
+
+    _usb_talk.tx_length += vsnprintf(_usb_talk.tx_buffer + _usb_talk.tx_length, sizeof(_usb_talk.tx_buffer) - _usb_talk.tx_length, format, ap);
+
+    va_end(ap);
+}
+
+void usb_talk_message_send(void)
+{
+    strcpy(_usb_talk.tx_buffer + _usb_talk.tx_length, "]\n");
+
+    _usb_talk.tx_length += 2;
+
+#if TALK_OVER_CDC
+    bc_usb_cdc_write(_usb_talk.tx_buffer, _usb_talk.tx_length);
+#else
+    bc_uart_async_write(BC_UART_UART2, _usb_talk.tx_buffer, _usb_talk.tx_length);
 #endif
 }
 
@@ -718,12 +762,13 @@ bool usb_talk_payload_get_string(usb_talk_payload_t *payload, char *buffer, size
         return false;
     }
     uint32_t token_length = payload->tokens[0].end - payload->tokens[0].start;
-    if (token_length > *length)
+    if (token_length > *length - 1)
     {
         return false;
     }
     strncpy(buffer, &payload->buffer[payload->tokens[0].start], token_length);
     *length = token_length;
+    buffer[token_length] = 0;
     return true;
 }
 
@@ -738,13 +783,36 @@ bool usb_talk_payload_get_key_string(usb_talk_payload_t *payload, const char *ke
                 return false;
             }
             uint32_t token_length = payload->tokens[i + 1].end - payload->tokens[i + 1].start;
-            if (token_length > *length)
+            if (token_length > *length - 1)
             {
                 return false;
             }
             strncpy(buffer, &payload->buffer[payload->tokens[i + 1].start], token_length);
             *length = token_length;
+            buffer[token_length] = 0;
             return true;
+        }
+    }
+    return false;
+}
+
+bool usb_talk_payload_get_node_id(usb_talk_payload_t *payload, uint64_t *value)
+{
+    return _usb_talk_payload_get_node_id(payload->buffer, &payload->tokens[0], value);
+}
+
+bool usb_talk_payload_get_key_node_id(usb_talk_payload_t *payload, const char *key, uint64_t *value)
+{
+    for (int i = 1; i + 1 < payload->token_count; i += 2)
+    {
+        if (usb_talk_is_string_token_equal(payload->buffer, &payload->tokens[i], key))
+        {
+            if (payload->tokens[i + 1].type != JSMN_STRING)
+            {
+                return false;
+            }
+
+            return _usb_talk_payload_get_node_id(payload->buffer, &payload->tokens[i + 1], value);
         }
     }
     return false;
@@ -909,6 +977,31 @@ static bool _usb_talk_token_get_string(const char *buffer, jsmntok_t *token, cha
     }
     strncpy(str, &buffer[token->start], token_length);
     *length = token_length;
+    return true;
+}
+
+static bool _usb_talk_payload_get_node_id(const char *buffer, jsmntok_t *token, uint64_t *value)
+{
+    if (token->type != JSMN_STRING)
+    {
+        return false;
+    }
+
+    uint32_t token_length = token->end - token->start;
+
+    if (token_length != 12)
+    {
+        return false;
+    }
+
+    char str_id[13];
+
+    strncpy(str_id, buffer + token->start, 12);
+
+    str_id[12] = 0;
+
+    sscanf(str_id, USB_TALK_DEVICE_ADDRESS, value);
+
     return true;
 }
 

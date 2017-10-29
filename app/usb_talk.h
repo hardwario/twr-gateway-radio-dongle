@@ -30,6 +30,10 @@ void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length);
 void usb_talk_send_string(const char *buffer);
 void usb_talk_send_format(const char *format, ...);
 
+void usb_talk_message_start(const char *topic, ...);
+void usb_talk_message_append(const char *format, ...);
+void usb_talk_message_send(void);
+
 void usb_talk_publish_bool(uint64_t *device_address, const char *subtopics, bool *value);
 void usb_talk_publish_int(uint64_t *device_address, const char *subtopics, int *value);
 void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, float *value);
@@ -64,6 +68,8 @@ bool usb_talk_payload_get_float(usb_talk_payload_t *payload, float *value);
 bool usb_talk_payload_get_key_float(usb_talk_payload_t *payload, const char *key, float *value);
 bool usb_talk_payload_get_string(usb_talk_payload_t *payload, char *buffer, size_t *length);
 bool usb_talk_payload_get_key_string(usb_talk_payload_t *payload, const char *key, char *buffer, size_t *length);
+bool usb_talk_payload_get_node_id(usb_talk_payload_t *payload, uint64_t *value);
+bool usb_talk_payload_get_key_node_id(usb_talk_payload_t *payload, const char *key, uint64_t *value);
 bool usb_talk_payload_get_compound_buffer(usb_talk_payload_t *payload, uint8_t *buffer, size_t *length, int *count_sum);
 
 bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const char *string);

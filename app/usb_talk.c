@@ -108,7 +108,28 @@ void usb_talk_message_start(const char *topic, ...)
 
     strcpy(_usb_talk.tx_buffer, "[\"");
 
-    _usb_talk.tx_length = 2 + vsnprintf(_usb_talk.tx_buffer + 2, sizeof(_usb_talk.tx_buffer), topic, ap);
+    _usb_talk.tx_length = 2 + vsnprintf(_usb_talk.tx_buffer + 2, sizeof(_usb_talk.tx_buffer) - 2, topic, ap);
+
+    strcpy(_usb_talk.tx_buffer + _usb_talk.tx_length, "\", ");
+
+    _usb_talk.tx_length += 3;
+
+    va_end(ap);
+}
+
+void usb_talk_message_start_id(uint64_t *device_address, const char *topic, ...)
+{
+    va_list ap;
+
+    strcpy(_usb_talk.tx_buffer, "[\"");
+
+    _usb_talk.tx_length = 2 + snprintf(_usb_talk.tx_buffer + 2, sizeof(_usb_talk.tx_buffer) - 2, USB_TALK_DEVICE_ADDRESS, *device_address);
+
+    _usb_talk.tx_buffer[_usb_talk.tx_length++] = '/';
+
+    va_start(ap, topic);
+
+    _usb_talk.tx_length += vsnprintf(_usb_talk.tx_buffer + _usb_talk.tx_length, sizeof(_usb_talk.tx_buffer) - _usb_talk.tx_length, topic, ap);
 
     strcpy(_usb_talk.tx_buffer + _usb_talk.tx_length, "\", ");
 
@@ -141,31 +162,45 @@ void usb_talk_message_send(void)
 #endif
 }
 
+void usb_talk_publish_null(uint64_t *device_address, const char *subtopics)
+{
+    usb_talk_send_format("[\"%012llx/%s\", null]\n", *device_address, subtopics);
+}
+
 void usb_talk_publish_bool(uint64_t *device_address, const char *subtopics, bool *value)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/%s\", %s]\n",
-                *device_address, subtopics, *value ? "true" : "false");
+    if (value == NULL)
+    {
+        usb_talk_publish_null(device_address, subtopics);
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+        return;
+    }
+
+    usb_talk_send_format("[\"%012llx/%s\", %s]\n", *device_address, subtopics, *value ? "true" : "false");
 }
 
 void usb_talk_publish_int(uint64_t *device_address, const char *subtopics, int *value)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/%s\", %d]\n",
-                *device_address, subtopics, *value);
+    if (value == NULL)
+    {
+        usb_talk_publish_null(device_address, subtopics);
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+        return;
+    }
+
+    usb_talk_send_format("[\"%012llx/%s\", %d]\n", *device_address, subtopics, *value);
 }
 
 void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, float *value)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/%s\", %0.2f]\n",
-                *device_address, subtopics, *value);
+    if (value == NULL)
+    {
+        usb_talk_publish_null(device_address, subtopics);
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+        return;
+    }
+
+    usb_talk_send_format("[\"%012llx/%s\", %0.2f]\n", *device_address, subtopics, *value);
 }
 
 void usb_talk_publish_complex_bool(uint64_t *device_address, const char *subtopic, const char *number, const char *name, bool *state)

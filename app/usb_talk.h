@@ -16,14 +16,17 @@ typedef struct
 
 } usb_talk_payload_t;
 
-typedef void (*usb_talk_sub_callback_t)(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+typedef struct usb_talk_subscribe_t usb_talk_subscribe_t;
 
-typedef struct {
+typedef void (*usb_talk_sub_callback_t)(uint64_t *device_address, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+
+struct usb_talk_subscribe_t
+{
     const char *topic;
     usb_talk_sub_callback_t callback;
+    uint8_t number;
     void *param;
-
-} usb_talk_subscribe_t;
+};
 
 void usb_talk_init(void);
 void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length);
@@ -34,9 +37,11 @@ void usb_talk_message_start(const char *topic, ...);
 void usb_talk_message_append(const char *format, ...);
 void usb_talk_message_send(void);
 
+void usb_talk_publish_null(uint64_t *device_address, const char *subtopics);
 void usb_talk_publish_bool(uint64_t *device_address, const char *subtopics, bool *value);
 void usb_talk_publish_int(uint64_t *device_address, const char *subtopics, int *value);
 void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, float *value);
+
 void usb_talk_publish_complex_bool(uint64_t *device_address, const char *subtopic, const char *number, const char *name, bool *state);
 void usb_talk_publish_event_count(uint64_t *device_address, const char *name, uint16_t *event_count);
 void usb_talk_publish_led(uint64_t *device_address, bool *state);

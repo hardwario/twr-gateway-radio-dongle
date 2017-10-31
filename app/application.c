@@ -9,7 +9,7 @@
 
 #define APPLICATION_TASK_ID 0
 
-static uint64_t my_device_address;
+static uint64_t my_id;
 static bc_led_t led;
 static bool led_state;
 static bool radio_enrollment_mode;
@@ -29,75 +29,69 @@ static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event,
 #endif
 
 static void radio_event_handler(bc_radio_event_t event, void *event_param);
-static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void led_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void relay_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void relay_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void module_relay_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void module_relay_pulse(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void module_relay_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void led_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void led_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void relay_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void relay_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void module_relay_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void module_relay_pulse(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void module_relay_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void lcd_text_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void lcd_screen_clear(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void led_strip_color_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void led_strip_brightness_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void led_strip_compound_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void led_strip_effect_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void led_strip_thermometer_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 
-static void info_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void nodes_purge(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void nodes_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void nodes_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void enrollment_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
+static void info_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void nodes_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void nodes_purge(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void nodes_add(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void nodes_remove(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void scan_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void scan_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void enrollment_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void enrollment_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void automatic_pairing_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void automatic_pairing_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 
-static void alias_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void alias_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-static void alias_list(uint64_t *device_address, usb_talk_payload_t *payload, void *param);
-
-static void radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state);
-static void radio_pub_state_get(uint8_t type, uint64_t *device_address);
-
-static uint8_t relay_0_number = 0;
-static uint8_t relay_1_number = 1;
+static void alias_add(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void alias_remove(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void alias_list(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 
 const usb_talk_subscribe_t subscribes[] = {
-    {"led/-/state/set", led_state_set, NULL},
-    {"led/-/state/get", led_state_get, NULL},
-    {"relay/-/state/set", relay_state_set, NULL},
-    {"relay/-/state/get", relay_state_get, NULL},
-    {"relay/0:0/state/set", module_relay_state_set, &relay_0_number},
-    {"relay/0:0/state/get", module_relay_state_get, &relay_0_number},
-    {"relay/0:0/pulse/set", module_relay_pulse, &relay_0_number},
-    {"relay/0:1/state/set", module_relay_state_set, &relay_1_number},
-    {"relay/0:1/state/get", module_relay_state_get, &relay_1_number},
-    {"relay/0:1/pulse/set", module_relay_pulse, &relay_1_number},
-    {"lcd/-/text/set", lcd_text_set, NULL},
-    {"lcd/-/screen/clear", lcd_screen_clear, NULL},
-    {"led-strip/-/color/set", led_strip_color_set, NULL},
-    {"led-strip/-/brightness/set", led_strip_brightness_set, NULL},
-    {"led-strip/-/compound/set", led_strip_compound_set, NULL},
-    {"led-strip/-/effect/set", led_strip_effect_set, NULL},
-    {"led-strip/-/thermometer/set", led_strip_thermometer_set, NULL},
-    {"/info/get", info_get, NULL},
-    {"/nodes/get", nodes_get, NULL},
-    {"/nodes/add", nodes_add, NULL},
-    {"/nodes/remove", nodes_remove, NULL},
-    {"/nodes/purge", nodes_purge, NULL},
-    {"/scan/start", scan_start, NULL},
-    {"/scan/stop", scan_stop, NULL},
-    {"/enrollment/start", enrollment_start, NULL},
-    {"/enrollment/stop", enrollment_stop, NULL},
-    {"/automatic-pairing/start", automatic_pairing_start, NULL},
-    {"/automatic-pairing/stop", automatic_pairing_stop, NULL},
-    {"$eeprom/alias/add", alias_add, NULL},
-    {"$eeprom/alias/remove", alias_remove, NULL},
-    {"$eeprom/alias/list", alias_list, NULL}
+    {"led/-/state/set", led_state_set, 0, NULL},
+    {"led/-/state/get", led_state_get, 0, NULL},
+    {"relay/-/state/set", relay_state_set, 0, NULL},
+    {"relay/-/state/get", relay_state_get, 0, NULL},
+    {"relay/0:0/state/set", module_relay_state_set, 0, NULL},
+    {"relay/0:0/state/get", module_relay_state_get, 0, NULL},
+    {"relay/0:0/pulse/set", module_relay_pulse, 0, NULL},
+    {"relay/0:1/state/set", module_relay_state_set, 1, NULL},
+    {"relay/0:1/state/get", module_relay_state_get, 1, NULL},
+    {"relay/0:1/pulse/set", module_relay_pulse, 1, NULL},
+    {"lcd/-/text/set", lcd_text_set, 0, NULL},
+    {"lcd/-/screen/clear", lcd_screen_clear, 0, NULL},
+    {"led-strip/-/color/set", led_strip_color_set, 0, NULL},
+    {"led-strip/-/brightness/set", led_strip_brightness_set, 0, NULL},
+    {"led-strip/-/compound/set", led_strip_compound_set, 0, NULL},
+    {"led-strip/-/effect/set", led_strip_effect_set, 0, NULL},
+    {"led-strip/-/thermometer/set", led_strip_thermometer_set, 0, NULL},
+    {"/info/get", info_get, 0, NULL},
+    {"/nodes/get", nodes_get, 0, NULL},
+    {"/nodes/add", nodes_add, 0, NULL},
+    {"/nodes/remove", nodes_remove, 0, NULL},
+    {"/nodes/purge", nodes_purge, 0, NULL},
+    {"/scan/start", scan_start, 0, NULL},
+    {"/scan/stop", scan_stop, 0, NULL},
+    {"/enrollment/start", enrollment_start, 0, NULL},
+    {"/enrollment/stop", enrollment_stop, 0, NULL},
+    {"/automatic-pairing/start", automatic_pairing_start, 0, NULL},
+    {"/automatic-pairing/stop", automatic_pairing_stop, 0, NULL},
+    {"$eeprom/alias/add", alias_add, 0, NULL},
+    {"$eeprom/alias/remove", alias_remove, 0, NULL},
+    {"$eeprom/alias/list", alias_list, 0, NULL}
 };
 
 void application_init(void)
@@ -135,7 +129,7 @@ void application_init(void)
     bc_button_init_virtual(&lcd_right, BC_MODULE_LCD_BUTTON_RIGHT, bc_module_lcd_get_button_driver(), false);
     bc_button_set_event_handler(&lcd_right, lcd_button_event_handler, NULL);
 
-    sensors_init_all(&my_device_address);
+    sensors_init_all(&my_id);
 
     bc_module_relay_init(&relay_0_0, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
     bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
@@ -171,7 +165,7 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
     }
     else if (event == BC_RADIO_EVENT_INIT_DONE)
     {
-        my_device_address = bc_radio_get_device_address();
+        my_id = bc_radio_get_device_address();
     }
     else if (event == BC_RADIO_EVENT_SCAN_FIND_DEVICE)
     {
@@ -290,39 +284,40 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 
     if (*length == 2)
     {
-        switch (buffer[0])
-        {
-            case RADIO_LED:
-            {
-                bool state = buffer[1];
-                usb_talk_publish_led(peer_device_address, &state);
-                break;
-            }
-            case RADIO_RELAY_0:
-            {
-                uint8_t number = 0;
-                bc_module_relay_state_t state = buffer[1];
-                usb_talk_publish_module_relay(peer_device_address, &number, &state);
-                break;
-            }
-            case RADIO_RELAY_1:
-            {
-                uint8_t number = 1;
-                bc_module_relay_state_t state = buffer[1];
-                usb_talk_publish_module_relay(peer_device_address, &number, &state);
-                break;
-            }
-            case RADIO_RELAY_POWER:
-            {
-                bool state = buffer[1];
-                usb_talk_publish_relay(peer_device_address, &state);
-                break;
-            }
-            default:
-            {
-                break;
-            }
-        }
+        // TODO: old compatibility, removed in the future
+       switch (buffer[0])
+       {
+           case RADIO_LED:
+           {
+               bool state = buffer[1];
+               usb_talk_publish_led(peer_device_address, &state);
+               break;
+           }
+           case RADIO_RELAY_0:
+           {
+               uint8_t number = 0;
+               bc_module_relay_state_t state = buffer[1];
+               usb_talk_publish_module_relay(peer_device_address, &number, &state);
+               break;
+           }
+           case RADIO_RELAY_1:
+           {
+               uint8_t number = 1;
+               bc_module_relay_state_t state = buffer[1];
+               usb_talk_publish_module_relay(peer_device_address, &number, &state);
+               break;
+           }
+           case RADIO_RELAY_POWER:
+           {
+               bool state = buffer[1];
+               usb_talk_publish_relay(peer_device_address, &state);
+               break;
+           }
+           default:
+           {
+               break;
+           }
+       }
     }
     else if (*length == 3)
     {
@@ -419,9 +414,9 @@ void bc_radio_on_info(uint64_t *peer_device_address, char *firmware)
     usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\"} ]\n", *peer_device_address, firmware);
 }
 
-static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void led_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) param;
+    (void) sub;
     bool state;
 
     if (!usb_talk_payload_get_bool(payload, &state))
@@ -429,38 +424,38 @@ static void led_state_set(uint64_t *device_address, usb_talk_payload_t *payload,
         return;
     }
 
-    if (my_device_address == *device_address)
+    if (my_id == *id)
     {
         led_state = state;
 
         bc_led_set_mode(&led, led_state ? BC_LED_MODE_ON : BC_LED_MODE_OFF);
 
-        usb_talk_publish_led(&my_device_address, &led_state);
+        usb_talk_publish_led(&my_id, &led_state);
     }
     else
     {
-        radio_pub_state_set(RADIO_LED_SET, device_address, state);
+        bc_radio_node_state_set(id, BC_RADIO_STATE_LED, &state);
     }
 }
 
-static void led_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void led_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) payload;
-    (void) param;
+    (void) sub;
 
-    if (my_device_address == *device_address)
+    if (my_id == *id)
     {
-        usb_talk_publish_led(&my_device_address, &led_state);
+        usb_talk_publish_led(&my_id, &led_state);
     }
     else
     {
-        radio_pub_state_get(RADIO_LED_GET, device_address);
+        bc_radio_node_state_get(id, BC_RADIO_STATE_LED);
     }
 }
 
-static void relay_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void relay_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) param;
+    (void) sub;
     bool state;
 
     if (!usb_talk_payload_get_bool(payload, &state))
@@ -468,68 +463,66 @@ static void relay_state_set(uint64_t *device_address, usb_talk_payload_t *payloa
         return;
     }
 
-    if (my_device_address == *device_address)
+    if (my_id == *id)
     {
         bc_module_power_relay_set_state(state);
 
-        usb_talk_publish_relay(&my_device_address, &state);
+        usb_talk_publish_relay(&my_id, &state);
     }
     else
     {
-        radio_pub_state_set(RADIO_RELAY_POWER_SET, device_address, state);
+        bc_radio_node_state_set(id, BC_RADIO_STATE_POWER_MODULE_RELAY, &state);
     }
 }
 
-static void relay_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void relay_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) payload;
-    (void) param;
+    (void) sub;
 
-    if (my_device_address == *device_address)
+    if (my_id == *id)
     {
         bool state = bc_module_power_relay_get_state();
 
-        usb_talk_publish_relay(&my_device_address, &state);
+        usb_talk_publish_relay(&my_id, &state);
     }
     else
     {
-        radio_pub_state_get(RADIO_RELAY_POWER_GET, device_address);
+        bc_radio_node_state_get(id, BC_RADIO_STATE_POWER_MODULE_RELAY);
     }
 
 }
 
-static void module_relay_state_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void module_relay_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) payload;
 
     bool state;
-    uint8_t *number = (uint8_t *) param;
 
     if (!usb_talk_payload_get_bool(payload, &state))
     {
         return;
     }
 
-    if (my_device_address != *device_address)
+    if (my_id != *id)
     {
-        radio_pub_state_set(*number == 0 ? RADIO_RELAY_0_SET : RADIO_RELAY_1_SET, device_address, state);
+        bc_radio_node_state_set(id, sub->number == 0 ? BC_RADIO_STATE_RELAY_MODULE_0 : BC_RADIO_STATE_RELAY_MODULE_1, &state);
     }
 #if CORE_MODULE
     else
     {
-        bc_module_relay_set_state(*number == 0 ? &relay_0_0 : &relay_0_1, state);
+        bc_module_relay_set_state(sub->number == 0 ? &relay_0_0 : &relay_0_1, state);
         bc_module_relay_state_t relay_state = state ? BC_MODULE_RELAY_STATE_TRUE : BC_MODULE_RELAY_STATE_FALSE;
-        usb_talk_publish_module_relay(&my_device_address, number, &relay_state);
+        usb_talk_publish_module_relay(&my_id, &sub->number, &relay_state);
     }
 #endif
 }
 
-static void module_relay_pulse(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void module_relay_pulse(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
 
     int duration;
     bool direction;
-    uint8_t *number = (uint8_t *) param;
 
     if (!usb_talk_payload_get_key_int(payload, "duration", &duration))
     {
@@ -541,11 +534,11 @@ static void module_relay_pulse(uint64_t *device_address, usb_talk_payload_t *pay
         direction = true;
     }
 
-    if (my_device_address != *device_address)
+    if (my_id != *id)
     {
         uint8_t buffer[1 + sizeof(uint64_t) + 1 + 4]; // HEAD + ADDRESS + DIRECTION + DURATION(4)
-        buffer[0] = (*number == 0) ? RADIO_RELAY_0_PULSE_SET : RADIO_RELAY_1_PULSE_SET;
-        memcpy(buffer + 1, device_address, sizeof(uint64_t));
+        buffer[0] = (sub->number == 0) ? RADIO_RELAY_0_PULSE_SET : RADIO_RELAY_1_PULSE_SET;
+        memcpy(buffer + 1, id, sizeof(uint64_t));
         buffer[sizeof(uint64_t) + 1] = (uint8_t) direction;
         memcpy(&buffer[sizeof(uint64_t) + 2], &duration, sizeof(uint32_t));
 
@@ -554,33 +547,32 @@ static void module_relay_pulse(uint64_t *device_address, usb_talk_payload_t *pay
 #if CORE_MODULE
     else
     {
-        bc_module_relay_pulse(*number == 0 ? &relay_0_0 : &relay_0_1, direction, duration);
+        bc_module_relay_pulse(sub->number == 0 ? &relay_0_0 : &relay_0_1, direction, duration);
     }
 #endif
 }
 
-static void module_relay_state_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void module_relay_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) payload;
-    uint8_t *number = (uint8_t *) param;
 
-    if (my_device_address == *device_address)
+    if (my_id == *id)
     {
-        radio_pub_state_get(*number == 0 ? RADIO_RELAY_0_GET : RADIO_RELAY_1_GET, device_address);
+        bc_radio_node_state_get(id, sub->number == 0 ? BC_RADIO_STATE_RELAY_MODULE_0 : BC_RADIO_STATE_RELAY_MODULE_1);
     }
 #if CORE_MODULE
     else
     {
-        bc_module_relay_state_t state = bc_module_relay_get_state(*number == 0 ? &relay_0_0 : &relay_0_1);
+        bc_module_relay_state_t state = bc_module_relay_get_state(sub->number == 0 ? &relay_0_0 : &relay_0_1);
 
-        usb_talk_publish_module_relay(&my_device_address, number, &state);
+        usb_talk_publish_module_relay(&my_id, &sub->number, &state);
     }
 #endif
 }
 
-static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void lcd_text_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) param;
+    (void) sub;
 
     int x;
     int y;
@@ -613,7 +605,7 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
         color = true;
     }
 
-    if (my_device_address == *device_address)
+    if (my_id == *id)
     {
 #if CORE_MODULE
         if (!lcd.mqtt)
@@ -668,7 +660,7 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
     {
         uint8_t buffer[1 + sizeof(uint64_t) + 5 + 32]; // HEAD + ADDRESS + X + Y + FONT_SIZE + LENGTH + TEXT
         buffer[0] = RADIO_LCD_TEXT_SET;
-        memcpy(buffer + 1, device_address, sizeof(uint64_t));
+        memcpy(buffer + 1, id, sizeof(uint64_t));
         buffer[sizeof(uint64_t) + 1] = (uint8_t) x;
         buffer[sizeof(uint64_t) + 2] = (uint8_t) y;
         buffer[sizeof(uint64_t) + 3] = (uint8_t) font_size;
@@ -680,16 +672,16 @@ static void lcd_text_set(uint64_t *device_address, usb_talk_payload_t *payload, 
     }
 }
 
-static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void lcd_screen_clear(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) payload;
-    (void) param;
+    (void) sub;
 
-    if (my_device_address != *device_address)
+    if (my_id != *id)
     {
         uint8_t buffer[1 + sizeof(uint64_t)];
         buffer[0] = RADIO_LCD_SCREEN_CLEAR;
-        memcpy(buffer + 1, device_address, sizeof(uint64_t));
+        memcpy(buffer + 1, id, sizeof(uint64_t));
         bc_radio_pub_buffer(buffer, sizeof(buffer));
     }
 #if CORE_MODULE
@@ -700,12 +692,12 @@ static void lcd_screen_clear(uint64_t *device_address, usb_talk_payload_t *paylo
 #endif
 }
 
-static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void led_strip_color_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) param;
+    (void) sub;
     uint8_t buffer[1 + sizeof(uint64_t) + 4];
     buffer[0] = RADIO_LED_STRIP_COLOR_SET;
-    memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    memcpy(buffer + 1, id, sizeof(uint64_t));
 
     char str[12];
     size_t length = sizeof(str);
@@ -727,9 +719,9 @@ static void led_strip_color_set(uint64_t *device_address, usb_talk_payload_t *pa
     bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
-static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void led_strip_brightness_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) param;
+    (void) sub;
     int value;
     if (!usb_talk_payload_get_int(payload, &value))
     {
@@ -743,18 +735,18 @@ static void led_strip_brightness_set(uint64_t *device_address, usb_talk_payload_
 
     uint8_t buffer[1 + sizeof(uint64_t) + 1];
     buffer[0] = RADIO_LED_STRIP_BRIGHTNESS_SET;
-    memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    memcpy(buffer + 1, id, sizeof(uint64_t));
     buffer[sizeof(uint64_t) + 1] = value;
 
     bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
-static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void led_strip_compound_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) param;
+    (void) sub;
     uint8_t buffer[64 - 9];
     buffer[0] = RADIO_LED_STRIP_COMPOUND_SET;
-    memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    memcpy(buffer + 1, id, sizeof(uint64_t));
 
     int count_sum = 0;
     size_t length;
@@ -773,16 +765,16 @@ static void led_strip_compound_set(uint64_t *device_address, usb_talk_payload_t 
 
 }
 
-static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void led_strip_effect_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) param;
+    (void) sub;
     uint8_t buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + sizeof(uint32_t)];
     int type;
     int int_wait;
     uint16_t wait;
 
     buffer[0] = RADIO_LED_STRIP_EFFECT_SET;
-    memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    memcpy(buffer + 1, id, sizeof(uint64_t));
 
     if (!usb_talk_payload_get_key_enum(payload, "type", &type, "test", "rainbow", "rainbow-cycle", "theater-chase-rainbow", "color-wipe", "theater-chase"))
     {
@@ -831,9 +823,9 @@ static void led_strip_effect_set(uint64_t *device_address, usb_talk_payload_t *p
     bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
-static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void led_strip_thermometer_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) param;
+    (void) sub;
 
     float temperature;
     int min;
@@ -856,7 +848,7 @@ static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload
     }
 
     buffer[0] = RADIO_LED_STRIP_THERMOMETER_SET;
-    memcpy(buffer + 1, device_address, sizeof(uint64_t));
+    memcpy(buffer + 1, id, sizeof(uint64_t));
 
     memcpy(buffer + 1 + sizeof(uint64_t), &temperature, sizeof(temperature));
 
@@ -866,19 +858,19 @@ static void led_strip_thermometer_set(uint64_t *device_address, usb_talk_payload
     bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
-static void info_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void info_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
-    (void) param;
+    (void) id;
+    (void) sub;
     (void) payload;
 
-    usb_talk_send_format("[\"/info\", {\"id\": \"" USB_TALK_DEVICE_ADDRESS "\", \"firmware\": \"" FIRMWARE "\"}]\n", my_device_address);
+    usb_talk_send_format("[\"/info\", {\"id\": \"" USB_TALK_DEVICE_ADDRESS "\", \"firmware\": \"" FIRMWARE "\"}]\n", my_id);
 }
 
-static void nodes_get(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void nodes_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
-    (void) param;
+    (void) id;
+    (void) sub;
     (void) payload;
 
     uint64_t peer_devices_address[BC_RADIO_MAX_DEVICES];
@@ -901,56 +893,55 @@ void _radio_node(usb_talk_payload_t *payload, bool (*call)(uint64_t))
 
     if (length == 12)
     {
-        uint64_t device_address = 0;
+        uint64_t id = 0;
 
-        if (sscanf(tmp, "%012llx/", &device_address))
+        if (sscanf(tmp, "%012llx/", &id))
         {
-            call(device_address);
+            call(id);
         }
     }
 }
 
-static void nodes_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void nodes_add(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
-    (void) param;
+    (void) id;
+    (void) sub;
     _radio_node(payload, bc_radio_peer_device_add);
 }
 
-static void nodes_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void nodes_remove(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
-    (void) param;
+    (void) id;
+    (void) sub;
     _radio_node(payload, bc_radio_peer_device_remove);
 }
 
-static void nodes_purge(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void nodes_purge(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
+    (void) id;
     (void) payload;
-    (void) param;
 
     bc_radio_peer_device_purge_all();
 
-    nodes_get(device_address, payload, param);
+    nodes_get(id, payload, sub);
 }
 
-static void scan_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void scan_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
+    (void) id;
     (void) payload;
-    (void) param;
+    (void) sub;
 
     bc_radio_scan_start();
 
     usb_talk_send_string("[\"/scan\", \"start\"]\n");
 }
 
-static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void scan_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
+    (void) id;
     (void) payload;
-    (void) param;
+    (void) sub;
 
     bc_radio_scan_stop();
 
@@ -958,11 +949,11 @@ static void scan_stop(uint64_t *device_address, usb_talk_payload_t *payload, voi
 }
 
 
-static void enrollment_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void enrollment_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
+    (void) id;
     (void) payload;
-    (void) param;
+    (void) sub;
 
     radio_enrollment_mode = true;
 
@@ -973,11 +964,11 @@ static void enrollment_start(uint64_t *device_address, usb_talk_payload_t *paylo
     usb_talk_send_string("[\"/enrollment\", \"start\"]\n");
 }
 
-static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void enrollment_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
+    (void) id;
     (void) payload;
-    (void) param;
+    (void) sub;
 
     radio_enrollment_mode = false;
 
@@ -988,11 +979,11 @@ static void enrollment_stop(uint64_t *device_address, usb_talk_payload_t *payloa
     usb_talk_send_string("[\"/enrollment\", \"stop\"]\n");
 }
 
-static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void automatic_pairing_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
+    (void) id;
     (void) payload;
-    (void) param;
+    (void) sub;
 
     bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
 
@@ -1001,11 +992,11 @@ static void automatic_pairing_start(uint64_t *device_address, usb_talk_payload_t
     usb_talk_send_string("[\"/automatic-pairing\", \"stop\"]\n");
 }
 
-static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void automatic_pairing_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
+    (void) id;
     (void) payload;
-    (void) param;
+    (void) sub;
 
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
@@ -1014,14 +1005,14 @@ static void automatic_pairing_stop(uint64_t *device_address, usb_talk_payload_t 
     usb_talk_send_string("[\"/automatic-pairing\", \"stop\"]\n");
 }
 
-static void alias_add(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void alias_add(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
-    (void) param;
+    (void) id;
+    (void) sub;
 
-    uint64_t id;
+    uint64_t node_id;
 
-    if (!usb_talk_payload_get_key_node_id(payload, "id", &id))
+    if (!usb_talk_payload_get_key_node_id(payload, "id", &node_id))
     {
         return;
     }
@@ -1034,28 +1025,28 @@ static void alias_add(uint64_t *device_address, usb_talk_payload_t *payload, voi
         return;
     }
 
-    eeprom_alias_add(&id, name);
+    eeprom_alias_add(&node_id, name);
 }
 
-static void alias_remove(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void alias_remove(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
-    (void) param;
+    (void) id;
+    (void) sub;
 
-    uint64_t id;
+    uint64_t node_id;
 
-    if (!usb_talk_payload_get_node_id(payload, &id))
+    if (!usb_talk_payload_get_node_id(payload, &node_id))
     {
         return;
     }
 
-    eeprom_alias_remove(&id);
+    eeprom_alias_remove(&node_id);
 }
 
-static void alias_list(uint64_t *device_address, usb_talk_payload_t *payload, void *param)
+static void alias_list(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) device_address;
-    (void) param;
+    (void) id;
+    (void) sub;
 
     int page;
 
@@ -1065,27 +1056,6 @@ static void alias_list(uint64_t *device_address, usb_talk_payload_t *payload, vo
     }
 
     eeprom_alias_list(page);
-}
-
-static void radio_pub_state_set(uint8_t type, uint64_t *device_address, bool state)
-{
-    uint8_t buffer[1 + sizeof(uint64_t) + 1];
-
-    buffer[0] = type;
-    memcpy(buffer + 1, device_address, sizeof(uint64_t));
-    buffer[sizeof(uint64_t) + 1] = state;
-
-    bc_radio_pub_buffer(buffer, sizeof(buffer));
-}
-
-static void radio_pub_state_get(uint8_t type, uint64_t *device_address)
-{
-    uint8_t buffer[1 + sizeof(uint64_t)];
-
-    buffer[0] = type;
-    memcpy(buffer + 1, device_address, sizeof(uint64_t));
-
-    bc_radio_pub_buffer(buffer, sizeof(buffer));
 }
 
 #if CORE_MODULE
@@ -1109,7 +1079,7 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
     if (event == BC_BUTTON_EVENT_PRESS)
     {
         static uint16_t event_count = 0;
-        usb_talk_publish_push_button(&my_device_address, "-", &event_count);
+        usb_talk_publish_push_button(&my_id, "-", &event_count);
         event_count++;
         bc_led_pulse(&led, 100);
     }
@@ -1143,13 +1113,13 @@ static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event,
     if (self->_channel.virtual_channel == BC_MODULE_LCD_BUTTON_LEFT)
     {
         static uint16_t event_left_count = 0;
-        usb_talk_publish_push_button(&my_device_address, "lcd:left", &event_left_count);
+        usb_talk_publish_push_button(&my_id, "lcd:left", &event_left_count);
         event_left_count++;
     }
     else
     {
         static uint16_t event_right_count = 0;
-        usb_talk_publish_push_button(&my_device_address, "lcd:right", &event_right_count);
+        usb_talk_publish_push_button(&my_id, "lcd:right", &event_right_count);
         event_right_count++;
     }
 }

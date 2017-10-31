@@ -235,6 +235,21 @@ void bc_radio_on_battery(uint64_t *peer_device_address, uint8_t *format, float *
             *voltage);
 }
 
+void bc_radio_on_state(uint64_t *peer_device_address, uint8_t who, bool *state)
+{
+    static const char *lut[] = {
+            [BC_RADIO_STATE_LED] = "led/-/state",
+            [BC_RADIO_STATE_RELAY_MODULE_0] = "relay/0:0/state",
+            [BC_RADIO_STATE_RELAY_MODULE_1] = "relay/0:1/state",
+            [BC_RADIO_STATE_POWER_MODULE_RELAY] = "relay/-/state"
+    };
+
+    if (who < 4)
+    {
+        usb_talk_publish_bool(peer_device_address, lut[who], state);
+    }
+}
+
 void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *length)
 {
     if (*length < 1)
@@ -282,44 +297,7 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
         }
     }
 
-    if (*length == 2)
-    {
-        // TODO: old compatibility, removed in the future
-       switch (buffer[0])
-       {
-           case RADIO_LED:
-           {
-               bool state = buffer[1];
-               usb_talk_publish_led(peer_device_address, &state);
-               break;
-           }
-           case RADIO_RELAY_0:
-           {
-               uint8_t number = 0;
-               bc_module_relay_state_t state = buffer[1];
-               usb_talk_publish_module_relay(peer_device_address, &number, &state);
-               break;
-           }
-           case RADIO_RELAY_1:
-           {
-               uint8_t number = 1;
-               bc_module_relay_state_t state = buffer[1];
-               usb_talk_publish_module_relay(peer_device_address, &number, &state);
-               break;
-           }
-           case RADIO_RELAY_POWER:
-           {
-               bool state = buffer[1];
-               usb_talk_publish_relay(peer_device_address, &state);
-               break;
-           }
-           default:
-           {
-               break;
-           }
-       }
-    }
-    else if (*length == 3)
+    if (*length == 3)
     {
         switch (buffer[0])
         {

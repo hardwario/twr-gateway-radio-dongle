@@ -39,7 +39,9 @@ void eeprom_alias_add(uint64_t *id, char *name)
 
     uint32_t address = EEPROM_ALIAS_ADDRESS_START + (i * EEPROM_ALIAS_ROW_LENGTH);
 
-    *((uint64_t *) &_eeprom.buffer) = *id;
+    uint64_t *pid = (uint64_t *)_eeprom.buffer;
+
+    *pid = *id;
 
     memcpy(_eeprom.buffer + 8, name, 32);
 
@@ -112,6 +114,7 @@ void eeprom_alias_list(int page)
     }
 
     uint32_t address;
+    uint64_t *pid;
     bool comma = false;
 
     usb_talk_message_start("$eeprom/alias/list/%d", page);
@@ -128,7 +131,9 @@ void eeprom_alias_list(int page)
             usb_talk_message_append(",");
         }
 
-        usb_talk_message_append("\"" USB_TALK_DEVICE_ADDRESS "\": \"%s\"", *((uint64_t *)_eeprom.buffer), _eeprom.buffer + 8);
+        pid = (uint64_t *)_eeprom.buffer;
+
+        usb_talk_message_append("\"" USB_TALK_DEVICE_ADDRESS "\": \"%s\"", *pid, _eeprom.buffer + 8);
 
         comma = true;
     }

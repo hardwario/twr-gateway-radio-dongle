@@ -259,43 +259,6 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 
     bc_led_pulse(&led, 10);
 
-    switch (buffer[0]) {
-        case RADIO_USER_TOPIC_BOOL:
-        {
-            if (*length < (1 + 1 + 1))
-            {
-                return;
-            }
-            usb_talk_publish_bool(peer_device_address, (char *)buffer + 2, (bool *)(buffer + 1));
-            break;
-        }
-        case RADIO_USER_TOPIC_INT:
-        {
-            if (*length < (1 + 4 + 1))
-            {
-                return;
-            }
-            int value;
-            memcpy(&value, buffer + 1, sizeof(int));
-            usb_talk_publish_int(peer_device_address, (char *)buffer + 5, &value);
-            break;
-        }
-        case RADIO_USER_TOPIC_FLOAT:
-        {
-            if (*length < (1 + 4 + 1))
-            {
-                return;
-            }
-            float value;
-            memcpy(&value, buffer + 1, sizeof(value));
-            usb_talk_publish_float(peer_device_address, (char *)buffer + 5, &value);
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
 
     if (*length == 3)
     {
@@ -390,6 +353,21 @@ void bc_radio_on_info(uint64_t *peer_device_address, char *firmware)
     bc_led_pulse(&led, 10);
 
     usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\"} ]\n", *peer_device_address, firmware);
+}
+
+void bc_radio_on_bool(uint64_t *id, char *subtopic, bool *value)
+{
+    usb_talk_publish_bool(id, subtopic, value);
+}
+
+void bc_radio_on_int(uint64_t *id, char *subtopic, int *value)
+{
+    usb_talk_publish_int(id, subtopic, value);
+}
+
+void bc_radio_on_float(uint64_t *id, char *subtopic, float *value)
+{
+    usb_talk_publish_float(id, subtopic, value);
 }
 
 static void led_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)

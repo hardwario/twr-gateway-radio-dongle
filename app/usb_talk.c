@@ -1,6 +1,7 @@
 #include <usb_talk.h>
 #include <bc_scheduler.h>
 #include <bc_usb_cdc.h>
+#include <bc_radio_pub.h>
 #include <base64.h>
 #include <application.h>
 
@@ -230,88 +231,59 @@ void usb_talk_publish_led(uint64_t *device_address, bool *state)
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_thermometer(uint64_t *device_address, uint8_t *i2c, float *temperature)
+void usb_talk_publish_thermometer(uint64_t *device_address, uint8_t *channel, float *temperature)
 {
-    uint8_t number = (*i2c & ~0x80) == BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT ? 0 : 1;
-
-    if((*i2c & ~0x80) == 0x00)
+    if(*channel == BC_RADIO_PUB_CHANNEL_A)
     {
-        if((*i2c & 0x80) == 0)
-        {
-            snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                    "[\"%012llx/thermometer/a/temperature\", %0.2f]\n",
-                    *device_address, *temperature);
-        }
-        else
-        {
-            snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                    "[\"%012llx/thermometer/b/temperature\", %0.2f]\n",
-                    *device_address, *temperature);
-        }
+        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                "[\"%012llx/thermometer/a/temperature\", %0.2f]\n",
+                *device_address, *temperature);
+    }
+    else if (*channel == BC_RADIO_PUB_CHANNEL_B)
+    {
+        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                "[\"%012llx/thermometer/b/temperature\", %0.2f]\n",
+                *device_address, *temperature);
     }
     else
     {
         snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/thermometer/%d:%d/temperature\", %0.2f]\n",
-                *device_address, ((*i2c & 0x80) >> 7), number, *temperature);
+                *device_address, ((*channel & 0x80) >> 7), (*channel & ~0x80), *temperature);
     }
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *i2c, float *relative_humidity)
+void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *channel, float *relative_humidity)
 {
-
-    uint8_t number;
-
-    switch((*i2c & ~0x80))
-    {
-        case 0x5f:
-            number = 0; // R1
-            break;
-        case 0x40:
-            number = 2; // R2 default
-            break;
-        case 0x41:
-            number = 3; // R2 alternate
-            break;
-        case 0x40 | 0x0f:
-            number = 4; // R3 default
-            break;
-        default:
-            number = 0;
-    }
-
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/hygrometer/%d:%d/relative-humidity\", %0.1f]\n",
-                *device_address, ((*i2c & 0x80) >> 7), number, *relative_humidity);
+                *device_address, ((*channel & 0x80) >> 7), (*channel & ~0x80), *relative_humidity);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t *i2c, float *illuminance)
+void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t *channel, float *illuminance)
 {
-
-    uint8_t number = (*i2c & ~0x80) == BC_TAG_LUX_METER_I2C_ADDRESS_DEFAULT ? 0 : 1;
-
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/lux-meter/%d:%d/illuminance\", %0.1f]\n",
-                *device_address, ((*i2c & 0x80) >> 7), number, *illuminance);
+                *device_address,  ((*channel & 0x80) >> 7), (*channel & ~0x80), *illuminance);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_barometer(uint64_t *device_address, uint8_t *i2c, float *pressure, float *altitude)
+void usb_talk_publish_barometer(uint64_t *device_address, uint8_t *channel, float *pressure, float *altitude)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/barometer/%d:0/pressure\", %0.2f]\n",
-                *device_address, ((*i2c & 0x80) >> 7), *pressure);
+                "[\"%012llx/barometer/%d:%d/pressure\", %0.2f]\n",
+                *device_address,  ((*channel & 0x80) >> 7), (*channel & ~0x80), *pressure);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/barometer/%d:0/altitude\", %0.2f]\n",
-                *device_address, ((*i2c & 0x80) >> 7), *altitude);
+                "[\"%012llx/barometer/%d:%d/altitude\", %0.2f]\n",
+                *device_address,  ((*channel & 0x80) >> 7), (*channel & ~0x80), *altitude);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }

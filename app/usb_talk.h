@@ -45,10 +45,10 @@ void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, flo
 void usb_talk_publish_complex_bool(uint64_t *device_address, const char *subtopic, const char *number, const char *name, bool *state);
 void usb_talk_publish_event_count(uint64_t *device_address, const char *name, uint16_t *event_count);
 void usb_talk_publish_led(uint64_t *device_address, bool *state);
-void usb_talk_publish_thermometer(uint64_t *device_address, uint8_t *i2c, float *temperature);
-void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *i2c, float *relative_humidity);
-void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t *i2c, float *illuminance);
-void usb_talk_publish_barometer(uint64_t *device_address, uint8_t *i2c, float *pascal, float *altitude);
+void usb_talk_publish_thermometer(uint64_t *device_address, uint8_t *channel, float *temperature);
+void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *channel, float *relative_humidity);
+void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t *channel, float *illuminance);
+void usb_talk_publish_barometer(uint64_t *device_address, uint8_t *channel, float *pascal, float *altitude);
 void usb_talk_publish_co2_concentation(uint64_t *device_address, float *concentration);
 void usb_talk_publish_light(uint64_t *device_address, bool *state);
 void usb_talk_publish_relay(uint64_t *device_address, bool *state);

@@ -12,7 +12,7 @@
 static uint64_t my_id;
 static bc_led_t led;
 static bool led_state;
-static bool radio_enrollment_mode;
+static bool radio_pairing_mode;
 
 #if CORE_MODULE
 static struct
@@ -51,8 +51,8 @@ static void nodes_add(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscr
 static void nodes_remove(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 static void scan_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 static void scan_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
-static void enrollment_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
-static void enrollment_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void pairing_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+static void pairing_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 static void automatic_pairing_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 static void automatic_pairing_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 
@@ -85,8 +85,8 @@ const usb_talk_subscribe_t subscribes[] = {
     {"/nodes/purge", nodes_purge, 0, NULL},
     {"/scan/start", scan_start, 0, NULL},
     {"/scan/stop", scan_stop, 0, NULL},
-    {"/enrollment/start", enrollment_start, 0, NULL},
-    {"/enrollment/stop", enrollment_stop, 0, NULL},
+    {"/pairing-mode/start", pairing_start, 0, NULL},
+    {"/pairing-mode/stop", pairing_stop, 0, NULL},
     {"/automatic-pairing/start", automatic_pairing_start, 0, NULL},
     {"/automatic-pairing/stop", automatic_pairing_stop, 0, NULL},
     {"$eeprom/alias/add", alias_add, 0, NULL},
@@ -104,9 +104,8 @@ void application_init(void)
     usb_talk_init();
     usb_talk_subscribes(subscribes, sizeof(subscribes) / sizeof(usb_talk_subscribe_t));
 
-    bc_radio_init();
+    bc_radio_init(BC_RADIO_MODE_GATEWAY);
     bc_radio_set_event_handler(radio_event_handler, NULL);
-    bc_radio_listen();
 
 #if CORE_MODULE
     bc_module_power_init();
@@ -143,41 +142,60 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
 {
     (void) event_param;
 
-    uint64_t peer_device_address = bc_radio_get_event_device_address();
+    uint64_t id = bc_radio_get_event_id();
 
     if (event == BC_RADIO_EVENT_ATTACH)
     {
         bc_led_pulse(&led, 1000);
 
-        usb_talk_send_format("[\"/attach\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", peer_device_address);
+        usb_talk_send_format("[\"/attach\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", id);
     }
     else if (event == BC_RADIO_EVENT_ATTACH_FAILURE)
     {
         bc_led_pulse(&led, 5000);
 
-        usb_talk_send_format("[\"/attach-failure\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", peer_device_address);
+        usb_talk_send_format("[\"/attach-failure\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", id);
     }
     else if (event == BC_RADIO_EVENT_DETACH)
     {
         bc_led_pulse(&led, 1000);
 
-        usb_talk_send_format("[\"/detach\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", peer_device_address);
+        usb_talk_send_format("[\"/detach\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", id);
     }
     else if (event == BC_RADIO_EVENT_INIT_DONE)
     {
-        my_id = bc_radio_get_device_address();
+        my_id = bc_radio_get_my_id();
     }
     else if (event == BC_RADIO_EVENT_SCAN_FIND_DEVICE)
     {
-        usb_talk_send_format("[\"/found\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", peer_device_address);
+        usb_talk_send_format("[\"/found\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", id);
     }
 }
 
-void bc_radio_on_push_button(uint64_t *peer_device_address, uint16_t *event_count)
+void bc_radio_on_event_count(uint64_t *id, uint8_t event_id, uint16_t *event_count)
 {
     bc_led_pulse(&led, 10);
 
-    usb_talk_publish_push_button(peer_device_address, "-", event_count);
+    if (event_id == BC_RADIO_EVENT_PUSH_BUTTON)
+    {
+        usb_talk_publish_event_count(id, "push-button/-", event_count);
+    }
+    else if (event_id == BC_RADIO_EVENT_PIR_MOTION)
+    {
+        usb_talk_publish_event_count(id, "pir/-", event_count);
+    }
+    else if (event_id == BC_RADIO_EVENT_LCD_BUTTON_LEFT)
+    {
+        usb_talk_publish_event_count(id, "push-button/lcd:left", event_count);
+    }
+    else if (event_id == BC_RADIO_EVENT_LCD_BUTTON_RIGHT)
+    {
+        usb_talk_publish_event_count(id, "push-button/lcd:right", event_count);
+    }
+    else if (event_id == BC_RADIO_EVENT_ACCELEROMETER_ALERT)
+    {
+        usb_talk_publish_event_count(id, "accelerometer/-", event_count);
+    }
 }
 
 void bc_radio_on_thermometer(uint64_t *peer_device_address, uint8_t *i2c, float *temperature)
@@ -237,6 +255,8 @@ void bc_radio_on_battery(uint64_t *peer_device_address, uint8_t *format, float *
 
 void bc_radio_on_state(uint64_t *peer_device_address, uint8_t who, bool *state)
 {
+    bc_led_pulse(&led, 10);
+
     static const char *lut[] = {
             [BC_RADIO_STATE_LED] = "led/-/state",
             [BC_RADIO_STATE_RELAY_MODULE_0] = "relay/0:0/state",
@@ -259,56 +279,7 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
 
     bc_led_pulse(&led, 10);
 
-
-    if (*length == 3)
-    {
-        switch (buffer[0])
-        {
-            case RADIO_PIR:
-            {
-                uint16_t event_count;
-                memcpy(&event_count, buffer + 1, sizeof(event_count));
-                usb_talk_publish_event_count(peer_device_address, "pir", &event_count);
-                break;
-            }
-            case RADIO_FLOOD_DETECTOR:
-            {
-                usb_talk_publish_flood_detector(peer_device_address, (char *) (buffer + 1), (bool *) (buffer + 2));
-                break;
-            }
-            case RADIO_LCD_BUTTON_LEFT:
-            {
-                uint16_t event_count;
-                memcpy(&event_count, buffer + 1, sizeof(event_count));
-                usb_talk_publish_push_button(peer_device_address, "lcd:left", &event_count);
-                break;
-            }
-            case RADIO_LCD_BUTTON_RIGHT:
-            {
-                uint16_t event_count;
-                memcpy(&event_count, buffer + 1, sizeof(event_count));
-                usb_talk_publish_push_button(peer_device_address, "lcd:right", &event_count);
-                break;
-            }
-            case RADIO_ACCELEROMETER_ALERT:
-            {
-                uint16_t event_count;
-                memcpy(&event_count, buffer + 1, sizeof(event_count));
-                usb_talk_publish_event_count(peer_device_address, "accelerometer", &event_count);
-                break;
-            }
-            case RADIO_MAGNET_SWITCH_STATE:
-            {
-                usb_talk_publish_complex_bool(peer_device_address, "magnet-switch", buffer[1] == RADIO_CHANNEL_A ? "a" : "b", "state", (bool *) &buffer[2]);
-                break;
-            }
-            default:
-            {
-                break;
-            }
-        }
-    }
-    else if (*length == 5)
+    if (*length == 5)
     {
         switch (buffer[0])
         {
@@ -348,25 +319,31 @@ void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *
     }
 }
 
-void bc_radio_on_info(uint64_t *peer_device_address, char *firmware)
+void bc_radio_on_info(uint64_t *id, char *firmware, char *version)
 {
     bc_led_pulse(&led, 10);
 
-    usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\"} ]\n", *peer_device_address, firmware);
+    usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\", \"version\": \"%s\"} ]\n", *id, firmware, version);
 }
 
 void bc_radio_on_bool(uint64_t *id, char *subtopic, bool *value)
 {
+    bc_led_pulse(&led, 10);
+
     usb_talk_publish_bool(id, subtopic, value);
 }
 
 void bc_radio_on_int(uint64_t *id, char *subtopic, int *value)
 {
+    bc_led_pulse(&led, 10);
+
     usb_talk_publish_int(id, subtopic, value);
 }
 
 void bc_radio_on_float(uint64_t *id, char *subtopic, float *value)
 {
+    bc_led_pulse(&led, 10);
+
     usb_talk_publish_float(id, subtopic, value);
 }
 
@@ -831,7 +808,7 @@ static void nodes_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscr
 
     uint64_t peer_devices_address[BC_RADIO_MAX_DEVICES];
 
-    bc_radio_get_peer_devices_address(peer_devices_address, BC_RADIO_MAX_DEVICES);
+    bc_radio_get_peer_id(peer_devices_address, BC_RADIO_MAX_DEVICES);
 
     usb_talk_publish_nodes(peer_devices_address, BC_RADIO_MAX_DEVICES);
 }
@@ -905,34 +882,34 @@ static void scan_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscr
 }
 
 
-static void enrollment_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
+static void pairing_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) id;
     (void) payload;
     (void) sub;
 
-    radio_enrollment_mode = true;
+    radio_pairing_mode = true;
 
     bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
 
-    bc_radio_enrollment_start();
+    bc_radio_pairing_mode_start();
 
-    usb_talk_send_string("[\"/enrollment\", \"start\"]\n");
+    usb_talk_send_string("[\"/pairing-mode\", \"start\"]\n");
 }
 
-static void enrollment_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
+static void pairing_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) id;
     (void) payload;
     (void) sub;
 
-    radio_enrollment_mode = false;
+    radio_pairing_mode = false;
 
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
-    bc_radio_enrollment_stop();
+    bc_radio_pairing_mode_stop();
 
-    usb_talk_send_string("[\"/enrollment\", \"stop\"]\n");
+    usb_talk_send_string("[\"/pairing-mode\", \"stop\"]\n");
 }
 
 static void automatic_pairing_start(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -1041,18 +1018,18 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
     }
     else if (event == BC_BUTTON_EVENT_HOLD)
     {
-        if (radio_enrollment_mode)
+        if (radio_pairing_mode)
         {
-            radio_enrollment_mode = false;
-            bc_radio_enrollment_stop();
+            radio_pairing_mode = false;
+            bc_radio_pairing_mode_stop();
             bc_led_set_mode(&led, BC_LED_MODE_OFF);
-            usb_talk_send_string("[\"/enrollment\", \"stop\"]\n");
+            usb_talk_send_string("[\"/pairing-mode\", \"stop\"]\n");
         }
         else{
-            radio_enrollment_mode = true;
-            bc_radio_enrollment_start();
+            radio_pairing_mode = true;
+            bc_radio_pairing_mode_start();
             bc_led_set_mode(&led, BC_LED_MODE_BLINK_FAST);
-            usb_talk_send_string("[\"/enrollment\", \"start\"]\n");
+            usb_talk_send_string("[\"/pairing-mode\", \"start\"]\n");
         }
     }
 }

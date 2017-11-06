@@ -45,7 +45,6 @@ void usb_talk_publish_float(uint64_t *device_address, const char *subtopics, flo
 void usb_talk_publish_complex_bool(uint64_t *device_address, const char *subtopic, const char *number, const char *name, bool *state);
 void usb_talk_publish_event_count(uint64_t *device_address, const char *name, uint16_t *event_count);
 void usb_talk_publish_led(uint64_t *device_address, bool *state);
-void usb_talk_publish_push_button(uint64_t *device_address, const char *name, uint16_t *event_count);
 void usb_talk_publish_thermometer(uint64_t *device_address, uint8_t *i2c, float *temperature);
 void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *i2c, float *relative_humidity);
 void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t *i2c, float *illuminance);

@@ -215,7 +215,7 @@ void usb_talk_publish_complex_bool(uint64_t *device_address, const char *subtopi
 void usb_talk_publish_event_count(uint64_t *device_address, const char *name, uint16_t *event_count)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-             "[\"%012llx/%s/-/event-count\", %" PRIu16 "]\n",
+             "[\"%012llx/%s/event-count\", %" PRIu16 "]\n",
              *device_address, name, *event_count);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
@@ -226,15 +226,6 @@ void usb_talk_publish_led(uint64_t *device_address, bool *state)
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/led/-/state\", %s]\n",
                 *device_address, *state ? "true" : "false");
-
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
-}
-
-void usb_talk_publish_push_button(uint64_t *device_address, const char *name, uint16_t *event_count)
-{
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-             "[\"%012llx/push-button/%s/event-count\", %" PRIu16 "]\n",
-             *device_address, name, *event_count);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }

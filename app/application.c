@@ -172,33 +172,33 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
     }
 }
 
-void bc_radio_on_event_count(uint64_t *id, uint8_t event_id, uint16_t *event_count)
+void bc_radio_pub_on_event_count(uint64_t *id, uint8_t event_id, uint16_t *event_count)
 {
     bc_led_pulse(&led, 10);
 
-    if (event_id == BC_RADIO_EVENT_PUSH_BUTTON)
+    if (event_id == BC_RADIO_PUB_EVENT_PUSH_BUTTON)
     {
         usb_talk_publish_event_count(id, "push-button/-", event_count);
     }
-    else if (event_id == BC_RADIO_EVENT_PIR_MOTION)
+    else if (event_id == BC_RADIO_PUB_EVENT_PIR_MOTION)
     {
         usb_talk_publish_event_count(id, "pir/-", event_count);
     }
-    else if (event_id == BC_RADIO_EVENT_LCD_BUTTON_LEFT)
+    else if (event_id == BC_RADIO_PUB_EVENT_LCD_BUTTON_LEFT)
     {
         usb_talk_publish_event_count(id, "push-button/lcd:left", event_count);
     }
-    else if (event_id == BC_RADIO_EVENT_LCD_BUTTON_RIGHT)
+    else if (event_id == BC_RADIO_PUB_EVENT_LCD_BUTTON_RIGHT)
     {
         usb_talk_publish_event_count(id, "push-button/lcd:right", event_count);
     }
-    else if (event_id == BC_RADIO_EVENT_ACCELEROMETER_ALERT)
+    else if (event_id == BC_RADIO_PUB_EVENT_ACCELEROMETER_ALERT)
     {
         usb_talk_publish_event_count(id, "accelerometer/-", event_count);
     }
 }
 
-void bc_radio_on_thermometer(uint64_t *peer_device_address, uint8_t *i2c, float *temperature)
+void bc_radio_pub_on_thermometer(uint64_t *peer_device_address, uint8_t *i2c, float *temperature)
 {
     (void) peer_device_address;
 
@@ -207,7 +207,7 @@ void bc_radio_on_thermometer(uint64_t *peer_device_address, uint8_t *i2c, float 
     usb_talk_publish_thermometer(peer_device_address, i2c, temperature);
 }
 
-void bc_radio_on_humidity(uint64_t *peer_device_address, uint8_t *i2c, float *percentage)
+void bc_radio_pub_on_humidity(uint64_t *peer_device_address, uint8_t *i2c, float *percentage)
 {
     (void) peer_device_address;
 
@@ -216,7 +216,7 @@ void bc_radio_on_humidity(uint64_t *peer_device_address, uint8_t *i2c, float *pe
     usb_talk_publish_humidity_sensor(peer_device_address, i2c, percentage);
 }
 
-void bc_radio_on_lux_meter(uint64_t *peer_device_address, uint8_t *i2c, float *illuminance)
+void bc_radio_pub_on_lux_meter(uint64_t *peer_device_address, uint8_t *i2c, float *illuminance)
 {
     (void) peer_device_address;
 
@@ -225,7 +225,7 @@ void bc_radio_on_lux_meter(uint64_t *peer_device_address, uint8_t *i2c, float *i
     usb_talk_publish_lux_meter(peer_device_address, i2c, illuminance);
 }
 
-void bc_radio_on_barometer(uint64_t *peer_device_address, uint8_t *i2c, float *pressure, float *altitude)
+void bc_radio_pub_on_barometer(uint64_t *peer_device_address, uint8_t *i2c, float *pressure, float *altitude)
 {
     (void) peer_device_address;
 
@@ -234,7 +234,7 @@ void bc_radio_on_barometer(uint64_t *peer_device_address, uint8_t *i2c, float *p
     usb_talk_publish_barometer(peer_device_address, i2c, pressure, altitude);
 }
 
-void bc_radio_on_co2(uint64_t *peer_device_address, float *concentration)
+void bc_radio_pub_on_co2(uint64_t *peer_device_address, float *concentration)
 {
     (void) peer_device_address;
 
@@ -243,25 +243,24 @@ void bc_radio_on_co2(uint64_t *peer_device_address, float *concentration)
     usb_talk_publish_co2_concentation(peer_device_address, concentration);
 }
 
-void bc_radio_on_battery(uint64_t *peer_device_address, uint8_t *format, float *voltage)
+void bc_radio_pub_on_battery(uint64_t *peer_device_address, float *voltage)
 {
     bc_led_pulse(&led, 10);
 
-    usb_talk_send_format("[\"%012llx/battery/%s/voltage\", %.2f]\n",
+    usb_talk_send_format("[\"%012llx/battery/-/voltage\", %.2f]\n",
             *peer_device_address,
-            *format == 0 ? "standard" : "mini",
             *voltage);
 }
 
-void bc_radio_on_state(uint64_t *peer_device_address, uint8_t who, bool *state)
+void bc_radio_pub_on_state(uint64_t *peer_device_address, uint8_t who, bool *state)
 {
     bc_led_pulse(&led, 10);
 
     static const char *lut[] = {
-            [BC_RADIO_STATE_LED] = "led/-/state",
-            [BC_RADIO_STATE_RELAY_MODULE_0] = "relay/0:0/state",
-            [BC_RADIO_STATE_RELAY_MODULE_1] = "relay/0:1/state",
-            [BC_RADIO_STATE_POWER_MODULE_RELAY] = "relay/-/state"
+            [BC_RADIO_PUB_STATE_LED] = "led/-/state",
+            [BC_RADIO_PUB_STATE_RELAY_MODULE_0] = "relay/0:0/state",
+            [BC_RADIO_PUB_STATE_RELAY_MODULE_1] = "relay/0:1/state",
+            [BC_RADIO_PUB_STATE_POWER_MODULE_RELAY] = "relay/-/state"
     };
 
     if (who < 4)
@@ -270,7 +269,7 @@ void bc_radio_on_state(uint64_t *peer_device_address, uint8_t who, bool *state)
     }
 }
 
-void bc_radio_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *length)
+void bc_radio_pub_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *length)
 {
     if (*length < 1)
     {
@@ -326,21 +325,21 @@ void bc_radio_on_info(uint64_t *id, char *firmware, char *version)
     usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\", \"version\": \"%s\"} ]\n", *id, firmware, version);
 }
 
-void bc_radio_on_bool(uint64_t *id, char *subtopic, bool *value)
+void bc_radio_pub_on_bool(uint64_t *id, char *subtopic, bool *value)
 {
     bc_led_pulse(&led, 10);
 
     usb_talk_publish_bool(id, subtopic, value);
 }
 
-void bc_radio_on_int(uint64_t *id, char *subtopic, int *value)
+void bc_radio_pub_on_int(uint64_t *id, char *subtopic, int *value)
 {
     bc_led_pulse(&led, 10);
 
     usb_talk_publish_int(id, subtopic, value);
 }
 
-void bc_radio_on_float(uint64_t *id, char *subtopic, float *value)
+void bc_radio_pub_on_float(uint64_t *id, char *subtopic, float *value)
 {
     bc_led_pulse(&led, 10);
 
@@ -367,7 +366,7 @@ static void led_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_su
     }
     else
     {
-        bc_radio_node_state_set(id, BC_RADIO_STATE_LED, &state);
+        bc_radio_node_state_set(id, BC_RADIO_NODE_STATE_LED, &state);
     }
 }
 
@@ -382,7 +381,7 @@ static void led_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_su
     }
     else
     {
-        bc_radio_node_state_get(id, BC_RADIO_STATE_LED);
+        bc_radio_node_state_get(id, BC_RADIO_NODE_STATE_LED);
     }
 }
 
@@ -404,7 +403,7 @@ static void relay_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_
     }
     else
     {
-        bc_radio_node_state_set(id, BC_RADIO_STATE_POWER_MODULE_RELAY, &state);
+        bc_radio_node_state_set(id, BC_RADIO_NODE_STATE_POWER_MODULE_RELAY, &state);
     }
 }
 
@@ -421,7 +420,7 @@ static void relay_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_
     }
     else
     {
-        bc_radio_node_state_get(id, BC_RADIO_STATE_POWER_MODULE_RELAY);
+        bc_radio_node_state_get(id, BC_RADIO_NODE_STATE_POWER_MODULE_RELAY);
     }
 
 }
@@ -439,7 +438,7 @@ static void module_relay_state_set(uint64_t *id, usb_talk_payload_t *payload, us
 
     if (my_id != *id)
     {
-        bc_radio_node_state_set(id, sub->number == 0 ? BC_RADIO_STATE_RELAY_MODULE_0 : BC_RADIO_STATE_RELAY_MODULE_1, &state);
+        bc_radio_node_state_set(id, sub->number == 0 ? BC_RADIO_NODE_STATE_RELAY_MODULE_0 : BC_RADIO_NODE_STATE_RELAY_MODULE_1, &state);
     }
 #if CORE_MODULE
     else
@@ -491,7 +490,7 @@ static void module_relay_state_get(uint64_t *id, usb_talk_payload_t *payload, us
 
     if (my_id == *id)
     {
-        bc_radio_node_state_get(id, sub->number == 0 ? BC_RADIO_STATE_RELAY_MODULE_0 : BC_RADIO_STATE_RELAY_MODULE_1);
+        bc_radio_node_state_get(id, sub->number == 0 ? BC_RADIO_NODE_STATE_RELAY_MODULE_0 : BC_RADIO_NODE_STATE_RELAY_MODULE_1);
     }
 #if CORE_MODULE
     else

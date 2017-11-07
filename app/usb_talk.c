@@ -290,6 +290,21 @@ void usb_talk_publish_barometer(uint64_t *device_address, uint8_t *i2c, float *p
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
+void usb_talk_publish_battery(uint64_t *device_address, uint8_t *format, float *voltage, float *percentage)
+{
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                "[\"%012llx/battery/%s/voltage\", %.2f]\n",
+                *device_address, (*format == 0 ? "standard" : "mini"), *voltage);
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                "[\"%012llx/battery/%s/percentage\", %.0f]\n",
+                *device_address, (*format == 0 ? "standard" : "mini"), *percentage);
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
 void usb_talk_publish_co2_concentation(uint64_t *device_address, float *concentration)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),

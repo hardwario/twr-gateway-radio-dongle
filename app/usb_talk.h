@@ -46,6 +46,7 @@ void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *i2c, fl
 void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t *i2c, float *illuminance);
 void usb_talk_publish_barometer(uint64_t *device_address, uint8_t *i2c, float *pascal, float *altitude);
 void usb_talk_publish_co2_concentation(uint64_t *device_address, float *concentration);
+void usb_talk_publish_battery(uint64_t *device_address, uint8_t *format, float *voltage, float *percentage);
 void usb_talk_publish_light(uint64_t *device_address, bool *state);
 void usb_talk_publish_relay(uint64_t *device_address, bool *state);
 void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, bc_module_relay_state_t *state);

@@ -143,6 +143,11 @@ void eeprom_alias_list(int page)
     usb_talk_message_send();
 }
 
+void eeprom_alias_purge(void)
+{
+    _eeprom_alias_length_set(0);
+}
+
 static int _eeprom_alias_find_position_for_id(uint64_t *id)
 {
     uint32_t address = EEPROM_ALIAS_ADDRESS_START;

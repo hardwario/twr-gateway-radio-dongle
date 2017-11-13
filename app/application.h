@@ -2,19 +2,19 @@
 #define _APPLICATION_H
 
 #ifndef CORE_MODULE
-#define CORE_MODULE 0
+#define CORE_MODULE 1
 #endif
 
-#ifndef TAG
-#define TAG "vdev"
+#ifndef VERSION
+#define VERSION "vdev"
 #endif
 
 #if CORE_MODULE
-#define FIRMWARE "bcf-gateway-core-module:" TAG
+#define FIRMWARE "bcf-gateway-core-module"
 #define TALK_OVER_CDC 1
 #define GPIO_LED BC_GPIO_LED
 #else
-#define FIRMWARE "bcf-gateway-usb-dongle:" TAG
+#define FIRMWARE "bcf-gateway-usb-dongle"
 #define GPIO_LED 19
 #endif
 

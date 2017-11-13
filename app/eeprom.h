@@ -19,5 +19,7 @@ void eeprom_alias_remove(uint64_t *id);
 
 void eeprom_alias_list(int page);
 
+void eeprom_alias_purge(void);
+
 
 #endif // APP_EEPROM_H

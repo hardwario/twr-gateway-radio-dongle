@@ -1,5 +1,4 @@
 #include <application.h>
-#include <bc_device_id.h>
 #include <radio.h>
 #include <usb_talk.h>
 #include <eeprom.h>
@@ -97,7 +96,7 @@ const usb_talk_subscribe_t subscribes[] = {
 void application_init(void)
 {
     bc_led_init(&led, GPIO_LED, false, false);
-    bc_led_set_mode(&led, BC_LED_MODE_ON);
+    bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
     eeprom_init();
 
@@ -134,7 +133,8 @@ void application_init(void)
     bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
 #endif
 
-    bc_led_set_mode(&led, BC_LED_MODE_OFF);
+    bc_led_pulse(&led, 2000);
+
     led_state = false;
 }
 
@@ -198,61 +198,49 @@ void bc_radio_pub_on_event_count(uint64_t *id, uint8_t event_id, uint16_t *event
     }
 }
 
-void bc_radio_pub_on_thermometer(uint64_t *peer_device_address, uint8_t *i2c, float *temperature)
-{
-    (void) peer_device_address;
-
-    bc_led_pulse(&led, 10);
-
-    usb_talk_publish_thermometer(peer_device_address, i2c, temperature);
-}
-
-void bc_radio_pub_on_humidity(uint64_t *peer_device_address, uint8_t *i2c, float *percentage)
-{
-    (void) peer_device_address;
-
-    bc_led_pulse(&led, 10);
-
-    usb_talk_publish_humidity_sensor(peer_device_address, i2c, percentage);
-}
-
-void bc_radio_pub_on_lux_meter(uint64_t *peer_device_address, uint8_t *i2c, float *illuminance)
-{
-    (void) peer_device_address;
-
-    bc_led_pulse(&led, 10);
-
-    usb_talk_publish_lux_meter(peer_device_address, i2c, illuminance);
-}
-
-void bc_radio_pub_on_barometer(uint64_t *peer_device_address, uint8_t *i2c, float *pressure, float *altitude)
-{
-    (void) peer_device_address;
-
-    bc_led_pulse(&led, 10);
-
-    usb_talk_publish_barometer(peer_device_address, i2c, pressure, altitude);
-}
-
-void bc_radio_pub_on_co2(uint64_t *peer_device_address, float *concentration)
-{
-    (void) peer_device_address;
-
-    bc_led_pulse(&led, 10);
-
-    usb_talk_publish_co2_concentation(peer_device_address, concentration);
-}
-
-void bc_radio_pub_on_battery(uint64_t *peer_device_address, float *voltage)
+void bc_radio_pub_on_temperature(uint64_t *id, uint8_t channel, float *celsius)
 {
     bc_led_pulse(&led, 10);
 
-    usb_talk_send_format("[\"%012llx/battery/-/voltage\", %.2f]\n",
-            *peer_device_address,
-            *voltage);
+    usb_talk_publish_temperature(id, channel, celsius);
 }
 
-void bc_radio_pub_on_state(uint64_t *peer_device_address, uint8_t who, bool *state)
+void bc_radio_pub_on_humidity(uint64_t *id, uint8_t channel, float *percentage)
+{
+    bc_led_pulse(&led, 10);
+
+    usb_talk_publish_humidity(id, channel, percentage);
+}
+
+void bc_radio_pub_on_lux_meter(uint64_t *id, uint8_t channel, float *illuminance)
+{
+    bc_led_pulse(&led, 10);
+
+    usb_talk_publish_lux_meter(id, channel, illuminance);
+}
+
+void bc_radio_pub_on_barometer(uint64_t *id, uint8_t channel, float *pressure, float *altitude)
+{
+    bc_led_pulse(&led, 10);
+
+    usb_talk_publish_barometer(id, channel, pressure, altitude);
+}
+
+void bc_radio_pub_on_co2(uint64_t *id, float *concentration)
+{
+    bc_led_pulse(&led, 10);
+
+    usb_talk_publish_co2(id, concentration);
+}
+
+void bc_radio_pub_on_battery(uint64_t *id, float *voltage)
+{
+    bc_led_pulse(&led, 10);
+
+    usb_talk_send_format("[\"%012llx/battery/-/voltage\", %.2f]\n", *id, *voltage);
+}
+
+void bc_radio_pub_on_state(uint64_t *id, uint8_t who, bool *state)
 {
     bc_led_pulse(&led, 10);
 
@@ -265,56 +253,7 @@ void bc_radio_pub_on_state(uint64_t *peer_device_address, uint8_t who, bool *sta
 
     if (who < 4)
     {
-        usb_talk_publish_bool(peer_device_address, lut[who], state);
-    }
-}
-
-void bc_radio_pub_on_buffer(uint64_t *peer_device_address, uint8_t *buffer, size_t *length)
-{
-    if (*length < 1)
-    {
-        return;
-    }
-
-    bc_led_pulse(&led, 10);
-
-    if (*length == 5)
-    {
-        switch (buffer[0])
-        {
-            case RADIO_THERMOSTAT_SET_POINT_TEMPERATURE:
-            {
-                float temperature;
-                memcpy(&temperature, buffer + 1, sizeof(temperature));
-                usb_talk_publish_float(peer_device_address, "thermostat/set-point/temperature", &temperature);
-                break;
-            }
-            default:
-            {
-                break;
-            }
-
-        }
-    }
-    else if (*length == 13)
-    {
-        switch (buffer[0])
-        {
-            case RADIO_ACCELEROMETER_ACCELERATION:
-            {
-                float x_axis, y_axis, z_axis;
-                memcpy(&x_axis, buffer + 1, sizeof(x_axis));
-                memcpy(&y_axis, buffer + 1 + sizeof(x_axis), sizeof(y_axis));
-                memcpy(&z_axis, buffer + 1 + sizeof(x_axis) + sizeof(y_axis), sizeof(z_axis));
-                usb_talk_publish_accelerometer_acceleration(peer_device_address, &x_axis, &y_axis, &z_axis);
-                break;
-            }
-            default:
-            {
-                break;
-            }
-
-        }
+        usb_talk_publish_bool(id, lut[who], state);
     }
 }
 
@@ -344,6 +283,38 @@ void bc_radio_pub_on_float(uint64_t *id, char *subtopic, float *value)
     bc_led_pulse(&led, 10);
 
     usb_talk_publish_float(id, subtopic, value);
+}
+
+void bc_radio_pub_on_buffer(uint64_t *id, uint8_t *buffer, size_t length)
+{
+    if (length < 1)
+    {
+        return;
+    }
+
+    bc_led_pulse(&led, 10);
+
+    if (length == 13)
+    {
+        switch (buffer[0])
+        {
+            // TODO: move to bc_radio_pub
+            case RADIO_ACCELEROMETER_ACCELERATION:
+            {
+                float x_axis, y_axis, z_axis;
+                memcpy(&x_axis, buffer + 1, sizeof(x_axis));
+                memcpy(&y_axis, buffer + 1 + sizeof(x_axis), sizeof(y_axis));
+                memcpy(&z_axis, buffer + 1 + sizeof(x_axis) + sizeof(y_axis), sizeof(z_axis));
+                usb_talk_publish_accelerometer_acceleration(id, &x_axis, &y_axis, &z_axis);
+                break;
+            }
+            default:
+            {
+                break;
+            }
+
+        }
+    }
 }
 
 static void led_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -796,7 +767,7 @@ static void info_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscri
     (void) sub;
     (void) payload;
 
-    usb_talk_send_format("[\"/info\", {\"id\": \"" USB_TALK_DEVICE_ADDRESS "\", \"firmware\": \"" FIRMWARE "\"}]\n", my_id);
+    usb_talk_send_format("[\"/info\", {\"id\": \"" USB_TALK_DEVICE_ADDRESS "\", \"firmware\": \"" FIRMWARE "\", \"version\": \"" VERSION "\"}]\n", my_id);
 }
 
 static void nodes_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -1011,7 +982,9 @@ static void button_event_handler(bc_button_t *self, bc_button_event_t event, voi
     if (event == BC_BUTTON_EVENT_PRESS)
     {
         static uint16_t event_count = 0;
-        usb_talk_publish_push_button(&my_id, "-", &event_count);
+
+        usb_talk_publish_event_count(&my_id, "push-button/-", &event_count);
+
         event_count++;
         bc_led_pulse(&led, 100);
     }
@@ -1045,13 +1018,13 @@ static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event,
     if (self->_channel.virtual_channel == BC_MODULE_LCD_BUTTON_LEFT)
     {
         static uint16_t event_left_count = 0;
-        usb_talk_publish_push_button(&my_id, "lcd:left", &event_left_count);
+        usb_talk_publish_event_count(&my_id, "push-button/lcd:left", &event_left_count);
         event_left_count++;
     }
     else
     {
         static uint16_t event_right_count = 0;
-        usb_talk_publish_push_button(&my_id, "lcd:right", &event_right_count);
+        usb_talk_publish_event_count(&my_id, "push-button/lcd:right", &event_right_count);
         event_right_count++;
     }
 }

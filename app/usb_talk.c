@@ -231,64 +231,70 @@ void usb_talk_publish_led(uint64_t *device_address, bool *state)
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_thermometer(uint64_t *device_address, uint8_t *channel, float *temperature)
+void usb_talk_publish_temperature(uint64_t *device_address, uint8_t channel, float *celsius)
 {
-    if(*channel == BC_RADIO_PUB_CHANNEL_A)
+    if(channel == BC_RADIO_PUB_CHANNEL_A)
     {
         snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/thermometer/a/temperature\", %0.2f]\n",
-                *device_address, *temperature);
+                *device_address, *celsius);
     }
-    else if (*channel == BC_RADIO_PUB_CHANNEL_B)
+    else if (channel == BC_RADIO_PUB_CHANNEL_B)
     {
         snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/thermometer/b/temperature\", %0.2f]\n",
-                *device_address, *temperature);
+                *device_address, *celsius);
+    }
+    else if (channel == BC_RADIO_PUB_CHANNEL_SET_POINT)
+    {
+        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                        "[\"%012llx/thermometer/set-point/temperature\", %0.2f]\n",
+                        *device_address, *celsius);
     }
     else
     {
         snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/thermometer/%d:%d/temperature\", %0.2f]\n",
-                *device_address, ((*channel & 0x80) >> 7), (*channel & ~0x80), *temperature);
+                *device_address, ((channel & 0x80) >> 7), (channel & ~0x80), *celsius);
     }
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_humidity_sensor(uint64_t *device_address, uint8_t *channel, float *relative_humidity)
+void usb_talk_publish_humidity(uint64_t *device_address, uint8_t channel, float *relative_humidity)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/hygrometer/%d:%d/relative-humidity\", %0.1f]\n",
-                *device_address, ((*channel & 0x80) >> 7), (*channel & ~0x80), *relative_humidity);
+                *device_address, ((channel & 0x80) >> 7), (channel & ~0x80), *relative_humidity);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t *channel, float *illuminance)
+void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t channel, float *illuminance)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/lux-meter/%d:%d/illuminance\", %0.1f]\n",
-                *device_address,  ((*channel & 0x80) >> 7), (*channel & ~0x80), *illuminance);
+                *device_address,  ((channel & 0x80) >> 7), (channel & ~0x80), *illuminance);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_barometer(uint64_t *device_address, uint8_t *channel, float *pressure, float *altitude)
+void usb_talk_publish_barometer(uint64_t *device_address, uint8_t channel, float *pressure, float *altitude)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/barometer/%d:%d/pressure\", %0.2f]\n",
-                *device_address,  ((*channel & 0x80) >> 7), (*channel & ~0x80), *pressure);
+                *device_address,  ((channel & 0x80) >> 7), (channel & ~0x80), *pressure);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/barometer/%d:%d/altitude\", %0.2f]\n",
-                *device_address,  ((*channel & 0x80) >> 7), (*channel & ~0x80), *altitude);
+                *device_address,  ((channel & 0x80) >> 7), (channel & ~0x80), *altitude);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_co2_concentation(uint64_t *device_address, float *concentration)
+void usb_talk_publish_co2(uint64_t *device_address, float *concentration)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%012llx/co2-meter/-/concentration\", %.0f]\n",
@@ -329,15 +335,6 @@ void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, bc
                     "[\"%012llx/relay/0:%d/state\", %s]\n",
                     *device_address, *number, *state == BC_MODULE_RELAY_STATE_TRUE ? "true" : "false");
     }
-
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
-}
-
-void usb_talk_publish_led_strip_config(uint64_t *device_address, const char *mode, int *count)
-{
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/led-strip/-/config\", {\"mode\": \"%s\", \"count\": %d}]\n",
-                *device_address, mode, *count );
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }

@@ -26,7 +26,7 @@
 
 typedef struct
 {
-    uint8_t number;
+    uint8_t channel;
     float value;
     bc_tick_t next_pub;
 

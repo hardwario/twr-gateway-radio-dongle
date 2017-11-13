@@ -1,5 +1,6 @@
 #include <sensors.h>
 #include <usb_talk.h>
+#include <bc_radio_pub.h>
 
 static uint64_t *_device_address;
 
@@ -82,7 +83,7 @@ static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_tem
     {
         if ((fabs(value - param->value) >= TEMPERATURE_TAG_PUB_VALUE_CHANGE) || (param->next_pub < bc_scheduler_get_spin_tick()))
         {
-        	usb_talk_publish_thermometer(_device_address, &param->number, &value);
+        	usb_talk_publish_temperature(_device_address, param->channel, &value);
 
             param->value = value;
             param->next_pub = bc_scheduler_get_spin_tick() + TEMPERATURE_TAG_PUB_NO_CHANGE_INTEVAL;
@@ -94,7 +95,7 @@ void temperature_tag_init(bc_i2c_channel_t i2c_channel, bc_tag_temperature_i2c_a
 {
     memset(tag, 0, sizeof(*tag));
 
-    tag->param.number = (i2c_channel << 7) | i2c_address;
+    tag->param.channel = i2c_address == BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT ? BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_DEFAULT: BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_ALTERNATE;
 
     bc_tag_temperature_init(&tag->self, i2c_channel, i2c_address);
 
@@ -117,7 +118,7 @@ static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_
     {
         if ((fabs(value - param->value) >= HUMIDITY_TAG_PUB_VALUE_CHANGE) || (param->next_pub < bc_scheduler_get_spin_tick()))
         {
-        	 usb_talk_publish_humidity_sensor(_device_address, &param->number, &value);
+        	 usb_talk_publish_humidity(_device_address, param->channel, &value);
 
             param->value = value;
             param->next_pub = bc_scheduler_get_spin_tick() + HUMIDITY_TAG_PUB_NO_CHANGE_INTEVAL;
@@ -127,28 +128,29 @@ static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_
 
 void humidity_tag_init(bc_tag_humidity_revision_t revision, bc_i2c_channel_t i2c_channel, humidity_tag_t *tag)
 {
-    uint8_t address;
-
     memset(tag, 0, sizeof(*tag));
 
     if (revision == BC_TAG_HUMIDITY_REVISION_R1)
     {
-        address = 0x5f;
+        tag->param.channel = BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_DEFAULT;
     }
     else if (revision == BC_TAG_HUMIDITY_REVISION_R2)
     {
-        address = 0x40;
+        tag->param.channel = BC_RADIO_PUB_CHANNEL_R2_I2C0_ADDRESS_DEFAULT;
     }
     else if (revision == BC_TAG_HUMIDITY_REVISION_R3)
     {
-        address = 0x40 | 0x0f; // 0x0f - hack
+        tag->param.channel = BC_RADIO_PUB_CHANNEL_R3_I2C0_ADDRESS_DEFAULT;
     }
     else
     {
         return;
     }
 
-    tag->param.number = (i2c_channel << 7) | address;
+    if (i2c_channel == BC_I2C_I2C1)
+    {
+        tag->param.channel |= 0x80;
+    }
 
     bc_tag_humidity_init(&tag->self, revision, i2c_channel, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
 
@@ -171,7 +173,7 @@ static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_e
     {
         if ((fabs(value - param->value) >= LUX_METER_TAG_PUB_VALUE_CHANGE) || (param->next_pub < bc_scheduler_get_spin_tick()))
         {
-        	 usb_talk_publish_lux_meter(_device_address, &param->number, &value);
+        	 usb_talk_publish_lux_meter(_device_address, param->channel, &value);
 
             param->value = value;
             param->next_pub = bc_scheduler_get_spin_tick() + LUX_METER_TAG_PUB_NO_CHANGE_INTEVAL;
@@ -183,7 +185,7 @@ void lux_meter_tag_init(bc_i2c_channel_t i2c_channel, bc_tag_lux_meter_i2c_addre
 {
     memset(tag, 0, sizeof(*tag));
 
-    tag->param.number = (i2c_channel << 7) | i2c_address;
+    tag->param.channel = i2c_address == BC_TAG_LUX_METER_I2C_ADDRESS_DEFAULT ? BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_DEFAULT: BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_ALTERNATE;
 
     bc_tag_lux_meter_init(&tag->self, i2c_channel, i2c_address);
 
@@ -215,7 +217,7 @@ static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_baromet
             return;
         }
 
-        usb_talk_publish_barometer(_device_address, &param->number, &pascal, &meter);
+        usb_talk_publish_barometer(_device_address, param->channel, &pascal, &meter);
 
         param->value = pascal;
         param->next_pub = bc_scheduler_get_spin_tick() + BAROMETER_TAG_PUB_NO_CHANGE_INTEVAL;
@@ -226,7 +228,7 @@ void barometer_tag_init(bc_i2c_channel_t i2c_channel, barometer_tag_t *tag)
 {
     memset(tag, 0, sizeof(*tag));
 
-    tag->param.number = (i2c_channel << 7) | 0x60;
+    tag->param.channel = BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_DEFAULT;
 
     bc_tag_barometer_init(&tag->self, i2c_channel);
 
@@ -246,7 +248,7 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
         {
             if ((fabs(value - param->value) >= CO2_PUB_VALUE_CHANGE) || (param->next_pub < bc_scheduler_get_spin_tick()))
             {
-                usb_talk_publish_co2_concentation(_device_address, &value);
+                usb_talk_publish_co2(_device_address, &value);
                 param->value = value;
                 param->next_pub = bc_scheduler_get_spin_tick() + CO2_PUB_NO_CHANGE_INTERVAL;
             }

@@ -2,9 +2,9 @@
 
 # Firmware for BigClown USB Gateway
 
-[![Travis](https://img.shields.io/travis/bigclownlabs/bcf-usb-gateway/master.svg)](https://travis-ci.org/bigclownlabs/bcf-usb-gateway)
-[![Release](https://img.shields.io/github/release/bigclownlabs/bcf-usb-gateway.svg)](https://github.com/bigclownlabs/bcf-usb-gateway/releases)
-[![License](https://img.shields.io/github/license/bigclownlabs/bcf-usb-gateway.svg)](https://github.com/bigclownlabs/bcf-usb-gateway/blob/master/LICENSE)
+[![Travis](https://img.shields.io/travis/bigclownlabs/bcf-gateway/master.svg)](https://travis-ci.org/bigclownlabs/bcf-gateway)
+[![Release](https://img.shields.io/github/release/bigclownlabs/bcf-gateway.svg)](https://github.com/bigclownlabs/bcf-gateway/releases)
+[![License](https://img.shields.io/github/license/bigclownlabs/bcf-gateway.svg)](https://github.com/bigclownlabs/bcf-gateway/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/BigClownLabs.svg?style=social&label=Follow)](https://twitter.com/BigClownLabs)
 
 This repository contains firmware for BigClown USB Gateway.

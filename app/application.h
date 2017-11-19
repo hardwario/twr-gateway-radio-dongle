@@ -2,7 +2,7 @@
 #define _APPLICATION_H
 
 #ifndef CORE_MODULE
-#define CORE_MODULE 1
+#define CORE_MODULE 0
 #endif
 
 #ifndef VERSION

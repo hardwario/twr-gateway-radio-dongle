@@ -398,8 +398,6 @@ static void relay_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_
 
 static void module_relay_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    (void) payload;
-
     bool state;
 
     if (!usb_talk_payload_get_bool(payload, &state))

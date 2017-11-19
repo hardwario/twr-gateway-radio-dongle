@@ -28,7 +28,7 @@ static struct
 #else
     uint8_t read_fifo_buffer[1024];
     bc_fifo_t read_fifo;
-    uint8_t write_fifo_buffer[512];
+    uint8_t write_fifo_buffer[1024];
     bc_fifo_t write_fifo;
 #endif
 
@@ -525,7 +525,7 @@ static void _usb_talk_process_message(char *message, size_t length)
                     token_count - USB_TALK_TOKEN_PAYLOAD,
                     tokens + USB_TALK_TOKEN_PAYLOAD
             };
-            _usb_talk.subscribes[i].callback(&device_address, &payload, _usb_talk.subscribes[i].param);
+            _usb_talk.subscribes[i].callback(&device_address, &payload, (usb_talk_subscribe_t *) &_usb_talk.subscribes[i]);
         }
     }
 }

@@ -45,6 +45,7 @@ static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *v
 static bool _usb_talk_token_get_float(const char *buffer, jsmntok_t *token, float *value);
 static bool _usb_talk_token_get_string(const char *buffer, jsmntok_t *token, char *str, size_t *length);
 static bool _usb_talk_payload_get_node_id(const char *buffer, jsmntok_t *token, uint64_t *value);
+static bool _usb_talk_payload_get_color(const char *buffer, jsmntok_t *token, uint32_t *color);
 
 void usb_talk_init(void)
 {
@@ -802,18 +803,30 @@ bool usb_talk_payload_get_key_node_id(usb_talk_payload_t *payload, const char *k
     {
         if (usb_talk_is_string_token_equal(payload->buffer, &payload->tokens[i], key))
         {
-            if (payload->tokens[i + 1].type != JSMN_STRING)
-            {
-                return false;
-            }
-
             return _usb_talk_payload_get_node_id(payload->buffer, &payload->tokens[i + 1], value);
         }
     }
     return false;
 }
 
-bool usb_talk_payload_get_compound_buffer(usb_talk_payload_t *payload, uint8_t *buffer, size_t *length, int *count_sum)
+bool usb_talk_payload_get_color(usb_talk_payload_t *payload, uint32_t *color)
+{
+    return _usb_talk_payload_get_color(payload->buffer, &payload->tokens[0], color);
+}
+
+bool usb_talk_payload_get_key_color(usb_talk_payload_t *payload, const char *key, uint32_t *color)
+{
+    for (int i = 1; i + 1 < payload->token_count; i += 2)
+    {
+        if (usb_talk_is_string_token_equal(payload->buffer, &payload->tokens[i], key))
+        {
+            return _usb_talk_payload_get_color(payload->buffer, &payload->tokens[i + 1], color);
+        }
+    }
+    return false;
+}
+
+bool usb_talk_payload_get_compound(usb_talk_payload_t *payload, uint8_t *compound, size_t *length, int *count_sum)
 {
     if (payload->tokens[0].type != JSMN_ARRAY)
     {
@@ -826,10 +839,8 @@ bool usb_talk_payload_get_compound_buffer(usb_talk_payload_t *payload, uint8_t *
     }
 
     int count;
-    char str[12];
-    size_t str_length;
     size_t _length = 0;
-    int _count_sum = 0;
+    *count_sum = 0;
 
     for (int i = 1; (i + 1 < payload->token_count) && (_length + 5 <= *length); i += 2)
     {
@@ -838,35 +849,23 @@ bool usb_talk_payload_get_compound_buffer(usb_talk_payload_t *payload, uint8_t *
             return false;
         }
 
-        if (_count_sum < *count_sum)
+        if (count > 255)
         {
-            _count_sum += count;
-            continue;
+            count = 255;
         }
 
-        str_length = sizeof(str);
+        compound[_length++] = count;
+        *count_sum += count;
 
-        if (!_usb_talk_token_get_string(payload->buffer, &payload->tokens[i + 1], str, &str_length))
-        {
-            return false;
-        }
-
-        if (((str_length != 7) && (str_length != 11)) || (str[0] != '#'))
+        if (!_usb_talk_payload_get_color(payload->buffer, &payload->tokens[i + 1], (uint32_t *) (compound + _length)))
         {
             return false;
         }
 
-        _count_sum += count;
-
-        *(buffer + _length++) = count;
-        *(buffer + _length++) = usb_talk_hex_to_u8(str + 1);
-        *(buffer + _length++) = usb_talk_hex_to_u8(str + 3);
-        *(buffer + _length++) = usb_talk_hex_to_u8(str + 5);
-        *(buffer + _length++) =  (str_length == 11) ?  usb_talk_hex_to_u8(str + 8) : 0x00;
+        _length += 4;
     }
 
     *length = _length;
-    *count_sum += _count_sum;
 
     return true;
 }
@@ -888,13 +887,6 @@ bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const 
     }
 
     return true;
-}
-
-uint8_t usb_talk_hex_to_u8(const char *hex)
-{
-    uint8_t high = (*hex <= '9') ? *hex - '0' : toupper(*hex) - 'A' + 10;
-    uint8_t low = (*(hex+1) <= '9') ? *(hex+1) - '0' : toupper(*(hex+1)) - 'A' + 10;
-    return (high << 4) | low;
 }
 
 static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *value)
@@ -1000,3 +992,39 @@ static bool _usb_talk_payload_get_node_id(const char *buffer, jsmntok_t *token, 
     return true;
 }
 
+static uint8_t _usb_talk_hex_to_u8(const char *hex)
+{
+    uint8_t high = (*hex <= '9') ? *hex - '0' : toupper(*hex) - 'A' + 10;
+    uint8_t low = (*(hex+1) <= '9') ? *(hex+1) - '0' : toupper(*(hex+1)) - 'A' + 10;
+    return (high << 4) | low;
+}
+
+static bool _usb_talk_payload_get_color(const char *buffer, jsmntok_t *token, uint32_t *color)
+{
+    if (token->type != JSMN_STRING)
+    {
+        return false;
+    }
+
+    char str[13];;
+    size_t length = sizeof(str);
+
+    if (!_usb_talk_token_get_string(buffer, token, str, &length))
+    {
+        return false;
+    }
+
+    if (((length != 7) && (length != 11)) || (str[0] != '#'))
+    {
+        return false;
+    }
+
+    uint8_t *pcolor = (uint8_t *) color;
+
+    pcolor[3] = _usb_talk_hex_to_u8(str + 1);
+    pcolor[2] =  _usb_talk_hex_to_u8(str + 3);
+    pcolor[1] =  _usb_talk_hex_to_u8(str + 5);
+    pcolor[0] =  (length == 11) ? _usb_talk_hex_to_u8(str + 8) : 0x00;
+
+    return true;
+}

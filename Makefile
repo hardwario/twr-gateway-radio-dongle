@@ -1,11 +1,11 @@
-override TAG ?= vdev
+override VERSION ?= vdev
 override CORE_MODULE ?= 0
 
 SDK_DIR ?= sdk
 
 CFLAGS += -D'BC_SCHEDULER_MAX_TASKS=64'
 CFLAGS += -D'BC_RADIO_MAX_DEVICES=16'
-CFLAGS += -D'TAG="$(TAG)"'
+CFLAGS += -D'VERSION="$(VERSION)"'
 CFLAGS += -D'CORE_MODULE=$(CORE_MODULE)'
 
 -include sdk/Makefile.mk
@@ -24,16 +24,16 @@ update: sdk
 
 .PHONY: core-module
 core-module:
-	@$(MAKE) debug TAG=$(TAG) CORE_MODULE=1
+	@$(MAKE) debug VERSION=$(VERSION) CORE_MODULE=1
 
 .PHONY: core-module-release
 core-module-release:
-	@$(MAKE) release TAG=$(TAG) CORE_MODULE=1
+	@$(MAKE) release VERSION=$(VERSION) CORE_MODULE=1
 
 .PHONY: usb-dongle
 usb-dongle:
-	@$(MAKE) debug TAG=$(TAG)
+	@$(MAKE) debug VERSION=$(VERSION)
 
 .PHONY: usb-dongle-release
 usb-dongle-release:
-	@$(MAKE) release TAG=$(TAG)
+	@$(MAKE) release VERSION=$(VERSION)

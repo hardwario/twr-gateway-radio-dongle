@@ -131,6 +131,8 @@ void application_init(void)
 
     bc_module_relay_init(&relay_0_0, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
     bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
+#else
+    info_get(NULL, NULL, NULL);
 #endif
 
     bc_led_pulse(&led, 2000);
@@ -596,34 +598,23 @@ static void lcd_screen_clear(uint64_t *id, usb_talk_payload_t *payload, usb_talk
 static void led_strip_color_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) sub;
-    uint8_t buffer[1 + sizeof(uint64_t) + 4];
-    buffer[0] = RADIO_LED_STRIP_COLOR_SET;
-    memcpy(buffer + 1, id, sizeof(uint64_t));
 
-    char str[12];
-    size_t length = sizeof(str);
-    if (!usb_talk_payload_get_string(payload, str, &length))
+    uint32_t color;
+
+    if (!usb_talk_payload_get_color(payload, &color))
     {
         return;
     }
 
-    if (((length != 7) && (length != 11)) || (str[0] != '#'))
-    {
-        return;
-    }
-
-    buffer[sizeof(uint64_t) + 1] = usb_talk_hex_to_u8(str + 1);
-    buffer[sizeof(uint64_t) + 2] = usb_talk_hex_to_u8(str + 3);
-    buffer[sizeof(uint64_t) + 3] = usb_talk_hex_to_u8(str + 5);
-    buffer[sizeof(uint64_t) + 4] = (length == 11) ? usb_talk_hex_to_u8(str + 8) : 0x00;
-
-    bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_node_led_strip_color_set(id, color);
 }
 
 static void led_strip_brightness_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) sub;
+
     int value;
+
     if (!usb_talk_payload_get_int(payload, &value))
     {
         return;
@@ -634,94 +625,61 @@ static void led_strip_brightness_set(uint64_t *id, usb_talk_payload_t *payload, 
         return;
     }
 
-    uint8_t buffer[1 + sizeof(uint64_t) + 1];
-    buffer[0] = RADIO_LED_STRIP_BRIGHTNESS_SET;
-    memcpy(buffer + 1, id, sizeof(uint64_t));
-    buffer[sizeof(uint64_t) + 1] = value;
+    uint8_t brightness = (uint16_t)value * 255 / 100;
 
-    bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_node_led_strip_brightness_set(id, brightness);
 }
 
 static void led_strip_compound_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) sub;
-    uint8_t buffer[64 - 9];
-    buffer[0] = RADIO_LED_STRIP_COMPOUND_SET;
-    memcpy(buffer + 1, id, sizeof(uint64_t));
 
-    int count_sum = 0;
-    size_t length;
+    uint8_t compound[BC_RADIO_NODE_MAX_COMPOUND_BUFFER_SIZE];
 
-    do
-    {
-        length = sizeof(buffer) - sizeof(uint64_t) - 2;
+    size_t length = sizeof(compound);
 
-        buffer[sizeof(uint64_t) + 1] = count_sum;
+    int count_sum;
 
-        usb_talk_payload_get_compound_buffer(payload, buffer + sizeof(uint64_t) + 2, &length, &count_sum);
+    usb_talk_payload_get_compound(payload, compound, &length, &count_sum);
 
-        bc_radio_pub_buffer(buffer, length + sizeof(uint64_t) + 2);
-
-    } while ((length == 45) && (count_sum < 255));
-
+    bc_radio_node_led_strip_compound_set(id, compound, length);
 }
 
 static void led_strip_effect_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
     (void) sub;
-    uint8_t buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + sizeof(uint32_t)];
-    int type;
-    int int_wait;
-    uint16_t wait;
 
-    buffer[0] = RADIO_LED_STRIP_EFFECT_SET;
-    memcpy(buffer + 1, id, sizeof(uint64_t));
+    int type;
+    int wait;
+    uint32_t color;
 
     if (!usb_talk_payload_get_key_enum(payload, "type", &type, "test", "rainbow", "rainbow-cycle", "theater-chase-rainbow", "color-wipe", "theater-chase"))
     {
         return;
     }
 
-    buffer[1 + sizeof(uint64_t)] = (uint8_t) type;
-
-    if (type > RADIO_LED_STRIP_EFFECT_TYPE_TEST)
+    if (type != BC_RADIO_NODE_LED_STRIP_EFFECT_TEST)
     {
-        if (!usb_talk_payload_get_key_int(payload, "wait", &int_wait))
+        if (!usb_talk_payload_get_key_int(payload, "wait", &wait))
         {
             return;
         }
 
-        if (int_wait < 0)
+        if (wait < 0)
         {
             return;
         }
-
-        wait = (uint16_t) int_wait;
-
-        memcpy(buffer + 1 + sizeof(uint64_t) + 1, &wait, sizeof(wait));
     }
 
-    if (type > RADIO_LED_STRIP_EFFECT_TYPE_THEATER_CHASE_RAINBOW)
+    if ((type == BC_RADIO_NODE_LED_STRIP_EFFECT_COLOR_WIPE) || (type == BC_RADIO_NODE_LED_STRIP_EFFECT_THEATER_CHASE))
     {
-        char str[13];
-        size_t length = sizeof(str);
-        if (!usb_talk_payload_get_key_string(payload, "color", str, &length))
+        if (!usb_talk_payload_get_key_color(payload, "color", &color))
         {
             return;
         }
-
-        if (((length != 7) && (length != 11)) || (str[0] != '#'))
-        {
-            return;
-        }
-
-        buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 3] = usb_talk_hex_to_u8(str + 1);
-        buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 2] = usb_talk_hex_to_u8(str + 3);
-        buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 1] = usb_talk_hex_to_u8(str + 5);
-        buffer[1 + sizeof(uint64_t) + 1 + sizeof(uint16_t) + 0] = (length == 11) ? usb_talk_hex_to_u8(str + 8) : 0x00;
     }
 
-    bc_radio_pub_buffer(buffer, sizeof(buffer));
+    bc_radio_node_led_strip_effect_set(id, (bc_radio_node_led_strip_effect_t) type, (uint16_t) wait, color);
 }
 
 static void led_strip_thermometer_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -731,7 +689,7 @@ static void led_strip_thermometer_set(uint64_t *id, usb_talk_payload_t *payload,
     float temperature;
     int min;
     int max;
-    uint8_t buffer[1 + sizeof(uint64_t) + sizeof(float) + 1 + 1];
+    float set_point;
 
     if (!usb_talk_payload_get_key_float(payload, "temperature", &temperature))
     {
@@ -748,15 +706,21 @@ static void led_strip_thermometer_set(uint64_t *id, usb_talk_payload_t *payload,
         return;
     }
 
-    buffer[0] = RADIO_LED_STRIP_THERMOMETER_SET;
-    memcpy(buffer + 1, id, sizeof(uint64_t));
+    if (usb_talk_payload_get_key_float(payload, "set-point", &set_point))
+    {
+        uint32_t color = 0;
 
-    memcpy(buffer + 1 + sizeof(uint64_t), &temperature, sizeof(temperature));
+        if (!usb_talk_payload_get_key_color(payload, "color", &color))
+        {
+            return;
+        }
 
-    buffer[1 + sizeof(uint64_t) + sizeof(uint32_t)] = (int8_t) min;
-    buffer[1 + sizeof(uint64_t) + sizeof(uint32_t) + 1] = (int8_t) max;
-
-    bc_radio_pub_buffer(buffer, sizeof(buffer));
+        bc_radio_node_led_strip_thermometer_set(id, temperature, min, max, &set_point, color);
+    }
+    else
+    {
+        bc_radio_node_led_strip_thermometer_set(id, temperature, min, max, NULL, 0);
+    }
 }
 
 static void info_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)

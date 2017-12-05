@@ -115,7 +115,15 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     ```
     mosquitto_pub -t 'node/{id}/led-strip/-/thermometer/set' -m '{"temperature": 22.5, "min":-20, "max": 50}'
     ```
-
+    ```
+    mosquitto_pub -t 'node/{id}/led-strip/-/thermometer/set' -m '{"temperature": 22.5, "min":-20, "max": 50, "white-dots": 10}'
+    ```
+    ```
+    mosquitto_pub -t 'node/{id}/led-strip/-/thermometer/set' -m '{"temperature": 22.5, "min":-20, "max": 50, "set-point": 30, "color":"#ff0000"}'
+    ```
+    ```
+    mosquitto_pub -t 'node/{id}/led-strip/-/thermometer/set' -m '{"temperature": 22.5, "min":-20, "max": 50, "white-dots": 10, "set-point": 30, "color":"#ff0000"}'
+    ```
 
 #### LCD module
   * Write text, supported font size [11, 13, 15, 24, 28, 33], default font is 15, color can by true or false, default is true

@@ -689,6 +689,7 @@ static void led_strip_thermometer_set(uint64_t *id, usb_talk_payload_t *payload,
     float temperature;
     int min;
     int max;
+    int white_dots = 0;
     float set_point;
 
     if (!usb_talk_payload_get_key_float(payload, "temperature", &temperature))
@@ -706,6 +707,13 @@ static void led_strip_thermometer_set(uint64_t *id, usb_talk_payload_t *payload,
         return;
     }
 
+    usb_talk_payload_get_key_int(payload, "white-dots", &white_dots);
+
+    if((white_dots > 255) || (white_dots < 0))
+    {
+    	white_dots = 0;
+    }
+
     if (usb_talk_payload_get_key_float(payload, "set-point", &set_point))
     {
         uint32_t color = 0;
@@ -715,11 +723,11 @@ static void led_strip_thermometer_set(uint64_t *id, usb_talk_payload_t *payload,
             return;
         }
 
-        bc_radio_node_led_strip_thermometer_set(id, temperature, min, max, &set_point, color);
+        bc_radio_node_led_strip_thermometer_set(id, temperature, min, max, white_dots, &set_point, color);
     }
     else
     {
-        bc_radio_node_led_strip_thermometer_set(id, temperature, min, max, NULL, 0);
+        bc_radio_node_led_strip_thermometer_set(id, temperature, min, max, white_dots, NULL, 0);
     }
 }
 

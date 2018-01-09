@@ -11,7 +11,7 @@ This repository contains firmware for BigClown USB Gateway.
 
 ## Firmware Programming
 
-You need to install [BigClown Toolchain](https://www.bigclown.com/doc/tutorials/toolchain-setup/) with [BigClown Firmware Tool](https://www.bigclown.com/doc/tutorials/toolchain-guide/)
+You need to install [BigClown Toolchain](https://www.bigclown.com/doc/tutorials/toolchain-setup/) with [BigClown Firmware Tool](https://www.bigclown.com/doc/tutorials/toolchain-guide/) at first.
 
 Upload Gatewat firmware for Core Module:
 ```

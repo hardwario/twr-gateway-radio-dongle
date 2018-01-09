@@ -13,12 +13,12 @@ This repository contains firmware for BigClown USB Gateway.
 
 You need to install [BigClown Toolchain](https://www.bigclown.com/doc/tutorials/toolchain-setup/) with [BigClown Firmware Tool](https://www.bigclown.com/doc/tutorials/toolchain-guide/) at first.
 
-Upload Gatewat firmware for Core Module:
+Upload gateway firmware for Core Module:
 ```
 bcf flash --dfu bigclownlabs/bcf-gateway-core-module:latest
 ```
 
-Upload Gatewat firmware for USB Dongle:
+Upload gateway firmware for USB Dongle:
 ```
 bcf flash bigclownlabs/bcf-gateway-usb-dongle:latest
 ```

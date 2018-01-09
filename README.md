@@ -13,15 +13,17 @@ This repository contains firmware for BigClown USB Gateway.
 
 You need to install [BigClown Toolchain](https://www.bigclown.com/doc/tutorials/toolchain-setup/) with [BigClown Firmware Tool](https://www.bigclown.com/doc/tutorials/toolchain-guide/) at first.
 
-Upload gateway firmware for Core Module:
-```
-bcf flash --dfu bigclownlabs/bcf-gateway-core-module:latest
-```
+Programming firmware for USB gateway:
 
-Upload gateway firmware for USB Dongle:
-```
-bcf flash bigclownlabs/bcf-gateway-usb-dongle:latest
-```
+  * Core Module:
+    ```
+    bcf flash --dfu bigclownlabs/bcf-gateway-core-module:latest
+    ```
+
+  * USB Dongle:
+    ```
+    bcf flash bigclownlabs/bcf-gateway-usb-dongle:latest
+    ```
 
 ### MQTT
 

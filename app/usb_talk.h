@@ -34,6 +34,7 @@ void usb_talk_send_string(const char *buffer);
 void usb_talk_send_format(const char *format, ...);
 
 void usb_talk_message_start(const char *topic, ...);
+void usb_talk_message_start_id(uint64_t *device_address, const char *topic, ...);
 void usb_talk_message_append(const char *format, ...);
 void usb_talk_message_send(void);
 

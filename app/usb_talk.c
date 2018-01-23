@@ -360,11 +360,36 @@ void usb_talk_publish_flood_detector(uint64_t *device_address, const char *numbe
 
 void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float *x_axis, float *y_axis, float *z_axis)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-            "[\"%012llx/accelerometer/-/acceleration\", [%0.2f,%0.2f,%0.2f]]\n",
-            *device_address, *x_axis, *y_axis, *z_axis);
+    usb_talk_message_start_id(device_address, "accelerometer/-/acceleration");
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    if (x_axis == NULL)
+    {
+        usb_talk_message_append("[null");
+    }
+    else
+    {
+        usb_talk_message_append("[%.6f", *x_axis);
+    }
+
+    if (y_axis == NULL)
+    {
+        usb_talk_message_append(", null");
+    }
+    else
+    {
+        usb_talk_message_append(", %.6f", *y_axis);
+    }
+
+    if (z_axis == NULL)
+    {
+        usb_talk_message_append(", null]");
+    }
+    else
+    {
+        usb_talk_message_append(", %.6f]", *z_axis);
+    }
+
+    usb_talk_message_send();
 }
 
 void usb_talk_publish_nodes(uint64_t *peer_devices_address, int lenght)

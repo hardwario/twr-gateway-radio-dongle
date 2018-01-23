@@ -10,12 +10,20 @@
 This repository contains firmware for BigClown USB Gateway.
 
 ## Firmware Programming
-```
-dfu-util -s 0x08000000:leave -d 0483:df11 -a 0 -D firmware.bin
-```
-More information about dfu [here](https://doc.bigclown.com/core-module-flashing.html)
 
-Firmware for node is here [https://github.com/bigclownlabs/bcf-generic-node](https://github.com/bigclownlabs/bcf-generic-node)
+You need to install [BigClown Toolchain](https://www.bigclown.com/doc/tutorials/toolchain-setup/) with [BigClown Firmware Tool](https://www.bigclown.com/doc/tutorials/toolchain-guide/) at first.
+
+Programming firmware for USB gateway:
+
+  * Core Module:
+    ```
+    bcf flash --dfu bigclownlabs/bcf-gateway-core-module:latest
+    ```
+
+  * USB Dongle:
+    ```
+    bcf flash bigclownlabs/bcf-gateway-usb-dongle:latest
+    ```
 
 ### MQTT
 

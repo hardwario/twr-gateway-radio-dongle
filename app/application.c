@@ -131,8 +131,6 @@ void application_init(void)
 
     bc_module_relay_init(&relay_0_0, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
     bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
-#else
-    info_get(NULL, NULL, NULL);
 #endif
 
     bc_led_pulse(&led, 2000);
@@ -167,6 +165,8 @@ static void radio_event_handler(bc_radio_event_t event, void *event_param)
     else if (event == BC_RADIO_EVENT_INIT_DONE)
     {
         my_id = bc_radio_get_my_id();
+
+        info_get(NULL, NULL, NULL);
     }
     else if (event == BC_RADIO_EVENT_SCAN_FIND_DEVICE)
     {
@@ -259,6 +259,13 @@ void bc_radio_pub_on_state(uint64_t *id, uint8_t who, bool *state)
     }
 }
 
+void bc_radio_pub_on_acceleration(uint64_t *id, float *x_axis, float *y_axis, float *z_axis)
+{
+    bc_led_pulse(&led, 10);
+
+    usb_talk_publish_accelerometer_acceleration(id, x_axis, y_axis, z_axis);
+}
+
 void bc_radio_on_info(uint64_t *id, char *firmware, char *version)
 {
     bc_led_pulse(&led, 10);
@@ -287,36 +294,33 @@ void bc_radio_pub_on_float(uint64_t *id, char *subtopic, float *value)
     usb_talk_publish_float(id, subtopic, value);
 }
 
-void bc_radio_pub_on_buffer(uint64_t *id, uint8_t *buffer, size_t length)
+void bc_radio_pub_on_uint32(uint64_t *id, char *subtopic, uint32_t *value)
 {
-    if (length < 1)
-    {
-        return;
-    }
-
     bc_led_pulse(&led, 10);
 
-    if (length == 13)
-    {
-        switch (buffer[0])
-        {
-            // TODO: move to bc_radio_pub
-            case RADIO_ACCELEROMETER_ACCELERATION:
-            {
-                float x_axis, y_axis, z_axis;
-                memcpy(&x_axis, buffer + 1, sizeof(x_axis));
-                memcpy(&y_axis, buffer + 1 + sizeof(x_axis), sizeof(y_axis));
-                memcpy(&z_axis, buffer + 1 + sizeof(x_axis) + sizeof(y_axis), sizeof(z_axis));
-                usb_talk_publish_accelerometer_acceleration(id, &x_axis, &y_axis, &z_axis);
-                break;
-            }
-            default:
-            {
-                break;
-            }
+    usb_talk_message_start_id(id, subtopic);
 
-        }
+    if (value == NULL)
+    {
+        usb_talk_message_append("null");
     }
+    else
+    {
+        usb_talk_message_append("%u", *value);
+    }
+
+    usb_talk_message_send();
+}
+
+void bc_radio_pub_on_string(uint64_t *id, char *subtopic, char *value)
+{
+    bc_led_pulse(&led, 10);
+
+    usb_talk_message_start_id(id, subtopic);
+
+    usb_talk_message_append("\"%s\"", value);
+
+    usb_talk_message_send();
 }
 
 static void led_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)

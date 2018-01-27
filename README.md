@@ -147,7 +147,7 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
     ```
 
 #### Radio
-  Read more here [bc-gateway](https://github.com/bigclownlabs/bch-usb-gateway)
+  Read more here [bch-gateway](https://github.com/bigclownlabs/bch-gateway)
 
 
 ## License

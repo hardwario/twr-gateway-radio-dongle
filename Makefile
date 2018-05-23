@@ -12,7 +12,7 @@ CFLAGS += -D'CORE_MODULE=$(CORE_MODULE)'
 
 .PHONY: all
 all: sdk
-	@$(MAKE) core-module
+	@$(MAKE) usb-dongle
 
 .PHONY: sdk
 sdk:

@@ -59,6 +59,8 @@ static void alias_add(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscr
 static void alias_remove(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 static void alias_list(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
 
+static void radio_sub_callback(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
+
 const usb_talk_subscribe_t subscribes[] = {
     {"led/-/state/set", led_state_set, 0, NULL},
     {"led/-/state/get", led_state_get, 0, NULL},
@@ -90,7 +92,7 @@ const usb_talk_subscribe_t subscribes[] = {
     {"/automatic-pairing/stop", automatic_pairing_stop, 0, NULL},
     {"$eeprom/alias/add", alias_add, 0, NULL},
     {"$eeprom/alias/remove", alias_remove, 0, NULL},
-    {"$eeprom/alias/list", alias_list, 0, NULL}
+    {"$eeprom/alias/list", alias_list, 0, NULL},
 };
 
 void application_init(void)
@@ -111,7 +113,7 @@ void application_init(void)
 
     memset(&lcd, 0, sizeof(lcd));
 
-    bc_module_lcd_init(&_bc_module_lcd_framebuffer);
+    bc_module_lcd_init();
     bc_module_lcd_clear();
     bc_module_lcd_update();
 
@@ -239,7 +241,11 @@ void bc_radio_pub_on_battery(uint64_t *id, float *voltage)
 {
     bc_led_pulse(&led, 10);
 
-    usb_talk_send_format("[\"%012llx/battery/-/voltage\", %.2f]\n", *id, *voltage);
+    usb_talk_message_start_id(id, "battery/-/voltage");
+
+    usb_talk_message_append_float("%.2f", voltage);
+
+    usb_talk_message_send();
 }
 
 void bc_radio_pub_on_state(uint64_t *id, uint8_t who, bool *state)
@@ -266,11 +272,28 @@ void bc_radio_pub_on_acceleration(uint64_t *id, float *x_axis, float *y_axis, fl
     usb_talk_publish_accelerometer_acceleration(id, x_axis, y_axis, z_axis);
 }
 
-void bc_radio_on_info(uint64_t *id, char *firmware, char *version)
+void bc_radio_on_info(uint64_t *id, char *firmware, char *version, bc_radio_mode_t mode)
 {
     bc_led_pulse(&led, 10);
 
-    usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\", \"version\": \"%s\"} ]\n", *id, firmware, version);
+    usb_talk_send_format("[\"" USB_TALK_DEVICE_ADDRESS "/info\", {\"firmware\": \"%s\", \"version\": \"%s\", \"mode\": %d}]\n", *id, firmware, version, mode);
+}
+
+void bc_radio_on_sub(uint64_t *id, uint8_t *number, bc_radio_sub_pt_t *pt, char *topic)
+{
+    static bc_radio_sub_pt_t subs_type[USB_TALK_SUB_LENGTH];
+
+    static int subs_pt_length = 0;
+
+    bc_led_pulse(&led, 10);
+
+    usb_talk_send_format("[\"$sub\", {\"topic\": \"" USB_TALK_DEVICE_ADDRESS "/%s\", \"pt\": %d}]\n", *id, topic, *pt);
+
+    subs_type[subs_pt_length] = *pt;
+
+    usb_talk_add_sub(topic, radio_sub_callback, *number, &subs_type[subs_pt_length]);
+
+    subs_pt_length++;
 }
 
 void bc_radio_pub_on_bool(uint64_t *id, char *subtopic, bool *value)
@@ -866,7 +889,7 @@ static void automatic_pairing_start(uint64_t *id, usb_talk_payload_t *payload, u
 
     bc_radio_automatic_pairing_start();
 
-    usb_talk_send_string("[\"/automatic-pairing\", \"stop\"]\n");
+    usb_talk_send_string("[\"/automatic-pairing\", \"start\"]\n");
 }
 
 static void automatic_pairing_stop(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -933,6 +956,70 @@ static void alias_list(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subsc
     }
 
     eeprom_alias_list(page);
+}
+
+static void radio_sub_callback(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
+{
+    bc_radio_sub_pt_t *pt = (bc_radio_sub_pt_t *) sub->param;
+
+    uint8_t value[41];
+
+    size_t value_size;
+
+    switch (*pt) {
+        case BC_RADIO_SUB_PT_BOOL:
+        {
+            if (!usb_talk_payload_get_bool(payload, (bool *) value))
+            {
+                return;
+            }
+
+            value_size = sizeof(bool);
+
+            break;
+        }
+        case BC_RADIO_SUB_PT_INT:
+        {
+            if (!usb_talk_payload_get_int(payload, (int *) value))
+            {
+                return;
+            }
+
+            value_size = sizeof(int);
+
+            break;
+        }
+        case BC_RADIO_SUB_PT_FLOAT:
+        {
+            if (!usb_talk_payload_get_float(payload, (float *) value))
+            {
+                return;
+            }
+
+            value_size = sizeof(float);
+
+            break;
+        }
+        case BC_RADIO_SUB_PT_STRING:
+        {
+            value_size = sizeof(value);
+
+            if (!usb_talk_payload_get_string(payload, (char *) value, &value_size))
+            {
+                return;
+            }
+
+            value_size += 1;
+
+            break;
+        }
+        default:
+        {
+            return;
+        }
+    }
+
+    bc_radio_send_sub_data(id, sub->number, value, value_size);
 }
 
 #if CORE_MODULE

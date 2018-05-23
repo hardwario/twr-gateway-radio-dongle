@@ -24,6 +24,12 @@ static struct
     const usb_talk_subscribe_t *subscribes;
     int subscribes_length;
 
+    usb_talk_subscribe_t subs[USB_TALK_SUB_LENGTH];
+    int subs_length;
+    char subs_topic[USB_TALK_SUB_LENGTH][USB_TALK_SUB_TOPIC_MAX_LENGTH];
+
+    bool read_start;
+
 #if TALK_OVER_CDC
 #else
     uint8_t read_fifo_buffer[1024];
@@ -39,6 +45,7 @@ static void _usb_talk_cdc_read_task(void *param);
 #else
 static void _usb_talk_uart_event_handler(bc_uart_channel_t channel, bc_uart_event_t event, void  *event_param);
 #endif
+static void _usb_talk_read_start(void);
 static void _usb_talk_process_character(char character);
 static void _usb_talk_process_message(char *message, size_t length);
 static bool _usb_talk_token_get_int(const char *buffer, jsmntok_t *token, int *value);
@@ -64,16 +71,49 @@ void usb_talk_init(void)
 void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length)
 {
     _usb_talk.subscribes = subscribes;
-    _usb_talk.subscribes_length = length;
-    if ((subscribes != NULL) && length > 0)
+
+    _usb_talk.subscribes_length = subscribes != NULL ? length : 0;
+
+    _usb_talk_read_start();
+}
+
+void usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8_t number, void *param)
+{
+    usb_talk_subscribe_t *sub = NULL;
+
+    for (int i = 0; i < _usb_talk.subs_length; i++)
     {
-#if TALK_OVER_CDC
-        bc_scheduler_register(_usb_talk_cdc_read_task, NULL, 0);
-#else
-        bc_uart_set_event_handler(BC_UART_UART2, _usb_talk_uart_event_handler, NULL);
-        bc_uart_async_read_start(BC_UART_UART2, 1000000);
-#endif
+        if (strncmp(_usb_talk.subs[i].topic, topic, USB_TALK_SUB_TOPIC_MAX_LENGTH) == 0)
+        {
+            sub = _usb_talk.subs + i;
+
+            break;
+        }
     }
+
+    if (sub == NULL)
+    {
+        if (_usb_talk.subs_length == USB_TALK_SUB_LENGTH)
+        {
+            return;
+        }
+
+        sub = _usb_talk.subs + _usb_talk.subs_length;
+
+        strncpy(_usb_talk.subs_topic[_usb_talk.subs_length], topic, USB_TALK_SUB_TOPIC_MAX_LENGTH);
+
+        sub->topic = _usb_talk.subs_topic[_usb_talk.subs_length];
+    }
+
+    sub->callback = callback;
+
+    sub->number = number;
+
+    sub->param = param;
+
+    _usb_talk.subs_length++;
+
+    _usb_talk_read_start();
 }
 
 void usb_talk_send_string(const char *buffer)
@@ -151,6 +191,20 @@ void usb_talk_message_append(const char *format, ...)
     va_end(ap);
 }
 
+void usb_talk_message_append_float(const char *format, float *value)
+{
+    if (value == NULL)
+    {
+        strncpy(_usb_talk.tx_buffer + _usb_talk.tx_length, "null", sizeof(_usb_talk.tx_buffer) - _usb_talk.tx_length);
+
+        _usb_talk.tx_length += 4;
+    }
+    else
+    {
+        _usb_talk.tx_length += snprintf(_usb_talk.tx_buffer + _usb_talk.tx_length, sizeof(_usb_talk.tx_buffer) - _usb_talk.tx_length, format, *value);
+    }
+}
+
 void usb_talk_message_send(void)
 {
     strcpy(_usb_talk.tx_buffer + _usb_talk.tx_length, "]\n");
@@ -216,10 +270,18 @@ void usb_talk_publish_complex_bool(uint64_t *device_address, const char *subtopi
 
 void usb_talk_publish_event_count(uint64_t *device_address, const char *name, uint16_t *event_count)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-             "[\"%012llx/%s/event-count\", %" PRIu16 "]\n",
-             *device_address, name, *event_count);
-
+    if (event_count == NULL)
+    {
+        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                 "[\"%012llx/%s/event-count\", null]\n",
+                 *device_address, name);
+    }
+    else
+    {
+        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+                 "[\"%012llx/%s/event-count\", %" PRIu16 "]\n",
+                 *device_address, name, *event_count);
+    }
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
@@ -236,81 +298,67 @@ void usb_talk_publish_temperature(uint64_t *device_address, uint8_t channel, flo
 {
     if(channel == BC_RADIO_PUB_CHANNEL_A)
     {
-        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/thermometer/a/temperature\", %0.2f]\n",
-                *device_address, *celsius);
+        usb_talk_publish_float(device_address, "thermometer/a/temperature", celsius);
+        return;
     }
     else if (channel == BC_RADIO_PUB_CHANNEL_B)
     {
-        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/thermometer/b/temperature\", %0.2f]\n",
-                *device_address, *celsius);
+        usb_talk_publish_float(device_address, "thermometer/b/temperature", celsius);
+        return;
     }
     else if (channel == BC_RADIO_PUB_CHANNEL_SET_POINT)
     {
-        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                        "[\"%012llx/thermometer/set-point/temperature\", %0.2f]\n",
-                        *device_address, *celsius);
-    }
-    else
-    {
-        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/thermometer/%d:%d/temperature\", %0.2f]\n",
-                *device_address, ((channel & 0x80) >> 7), (channel & ~0x80), *celsius);
+        usb_talk_publish_float(device_address, "thermometer/set-point/temperature", celsius);
+        return;
     }
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    usb_talk_message_start_id(device_address, "thermometer/%d:%d/temperature", ((channel & 0x80) >> 7), (channel & ~0x80));
+
+    usb_talk_message_append_float("%.2f", celsius);
+
+    usb_talk_message_send();
 }
 
 void usb_talk_publish_humidity(uint64_t *device_address, uint8_t channel, float *relative_humidity)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/hygrometer/%d:%d/relative-humidity\", %0.1f]\n",
-                *device_address, ((channel & 0x80) >> 7), (channel & ~0x80), *relative_humidity);
+    usb_talk_message_start_id(device_address, "hygrometer/%d:%d/relative-humidity", ((channel & 0x80) >> 7), (channel & ~0x80));
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    usb_talk_message_append_float("%.1f", relative_humidity);
+
+    usb_talk_message_send();
 }
 
 void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t channel, float *illuminance)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/lux-meter/%d:%d/illuminance\", %0.1f]\n",
-                *device_address,  ((channel & 0x80) >> 7), (channel & ~0x80), *illuminance);
+    usb_talk_message_start_id(device_address, "lux-meter/%d:%d/illuminance", ((channel & 0x80) >> 7), (channel & ~0x80));
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    usb_talk_message_append_float("%.1f", illuminance);
+
+    usb_talk_message_send();
 }
 
 void usb_talk_publish_barometer(uint64_t *device_address, uint8_t channel, float *pressure, float *altitude)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/barometer/%d:%d/pressure\", %0.2f]\n",
-                *device_address,  ((channel & 0x80) >> 7), (channel & ~0x80), *pressure);
+    usb_talk_message_start_id(device_address, "barometer/%d:%d/pressure", ((channel & 0x80) >> 7), (channel & ~0x80));
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    usb_talk_message_append_float("%.2f", pressure);
 
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/barometer/%d:%d/altitude\", %0.2f]\n",
-                *device_address,  ((channel & 0x80) >> 7), (channel & ~0x80), *altitude);
+    usb_talk_message_send();
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    usb_talk_message_start_id(device_address, "barometer/%d:%d/altitude", ((channel & 0x80) >> 7), (channel & ~0x80));
+
+    usb_talk_message_append_float("%.2f", altitude);
+
+    usb_talk_message_send();
 }
 
 void usb_talk_publish_co2(uint64_t *device_address, float *concentration)
 {
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/co2-meter/-/concentration\", %.0f]\n",
-                *device_address, *concentration);
+    usb_talk_message_start_id(device_address, "co2-meter/-/concentration");
 
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
-}
+    usb_talk_message_append_float("%.0f", concentration);
 
-void usb_talk_publish_light(uint64_t *device_address, bool *state)
-{
-    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%012llx/light/-/state\", %s]\n",
-                *device_address, *state ? "true" : "false");
-
-    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+    usb_talk_message_send();
 }
 
 void usb_talk_publish_relay(uint64_t *device_address, bool *state)
@@ -469,6 +517,26 @@ static void _usb_talk_uart_event_handler(bc_uart_channel_t channel, bc_uart_even
 }
 #endif
 
+void _usb_talk_read_start(void)
+{
+    if (_usb_talk.read_start)
+    {
+        return;
+    }
+
+    if (((_usb_talk.subscribes != NULL) && (_usb_talk.subscribes_length > 0)) || ((_usb_talk.subs != NULL) && (_usb_talk.subs_length > 0)))
+    {
+#if TALK_OVER_CDC
+        bc_scheduler_register(_usb_talk_cdc_read_task, NULL, 0);
+#else
+        bc_uart_set_event_handler(BC_UART_UART2, _usb_talk_uart_event_handler, NULL);
+        bc_uart_async_read_start(BC_UART_UART2, 1000000);
+#endif
+
+        _usb_talk.read_start = true;
+    }
+}
+
 static void _usb_talk_process_character(char character)
 {
     if (character == '\n')
@@ -554,6 +622,20 @@ static void _usb_talk_process_message(char *message, size_t length)
             _usb_talk.subscribes[i].callback(&device_address, &payload, (usb_talk_subscribe_t *) &_usb_talk.subscribes[i]);
         }
     }
+
+    for (int i = 0; i < _usb_talk.subs_length; i++)
+    {
+        if (strncmp(_usb_talk.subs[i].topic, topic, topic_length) == 0)
+        {
+            usb_talk_payload_t payload = {
+                    message,
+                    token_count - USB_TALK_TOKEN_PAYLOAD,
+                    tokens + USB_TALK_TOKEN_PAYLOAD
+            };
+            _usb_talk.subs[i].callback(&device_address, &payload, (usb_talk_subscribe_t *) &_usb_talk.subs[i]);
+        }
+    }
+
 }
 
 bool usb_talk_payload_get_bool(usb_talk_payload_t *payload, bool *value)

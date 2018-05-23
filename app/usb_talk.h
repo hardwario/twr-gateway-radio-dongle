@@ -5,6 +5,12 @@
 #include <jsmn.h>
 #include <bc_module_relay.h>
 
+#ifndef USB_TALK_SUB_LENGTH
+#define USB_TALK_SUB_LENGTH 16
+#endif
+#ifndef USB_TALK_SUB_TOPIC_MAX_LENGTH
+#define USB_TALK_SUB_TOPIC_MAX_LENGTH 32
+#endif
 #define USB_TALK_INT_VALUE_NULL INT32_MIN
 #define USB_TALK_DEVICE_ADDRESS "%012llx"
 
@@ -30,12 +36,14 @@ struct usb_talk_subscribe_t
 
 void usb_talk_init(void);
 void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length);
+void usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8_t number, void *param);
 void usb_talk_send_string(const char *buffer);
 void usb_talk_send_format(const char *format, ...);
 
 void usb_talk_message_start(const char *topic, ...);
 void usb_talk_message_start_id(uint64_t *device_address, const char *topic, ...);
 void usb_talk_message_append(const char *format, ...);
+void usb_talk_message_append_float(const char *format, float *value);
 void usb_talk_message_send(void);
 
 void usb_talk_publish_null(uint64_t *device_address, const char *subtopics);

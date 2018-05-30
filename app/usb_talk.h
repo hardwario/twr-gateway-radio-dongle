@@ -6,7 +6,7 @@
 #include <bc_module_relay.h>
 
 #ifndef USB_TALK_SUB_LENGTH
-#define USB_TALK_SUB_LENGTH 16
+#define USB_TALK_SUB_LENGTH 32
 #endif
 #ifndef USB_TALK_SUB_TOPIC_MAX_LENGTH
 #define USB_TALK_SUB_TOPIC_MAX_LENGTH 32
@@ -36,7 +36,7 @@ struct usb_talk_subscribe_t
 
 void usb_talk_init(void);
 void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length);
-void usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8_t number, void *param);
+bool usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8_t number, void *param);
 void usb_talk_send_string(const char *buffer);
 void usb_talk_send_format(const char *format, ...);
 

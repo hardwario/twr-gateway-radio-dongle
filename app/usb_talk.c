@@ -77,7 +77,7 @@ void usb_talk_subscribes(const usb_talk_subscribe_t *subscribes, int length)
     _usb_talk_read_start();
 }
 
-void usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8_t number, void *param)
+bool usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8_t number, void *param)
 {
     usb_talk_subscribe_t *sub = NULL;
 
@@ -93,9 +93,9 @@ void usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8
 
     if (sub == NULL)
     {
-        if (_usb_talk.subs_length == USB_TALK_SUB_LENGTH)
+        if (_usb_talk.subs_length >= USB_TALK_SUB_LENGTH)
         {
-            return;
+            return false;
         }
 
         sub = _usb_talk.subs + _usb_talk.subs_length;
@@ -103,6 +103,8 @@ void usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8
         strncpy(_usb_talk.subs_topic[_usb_talk.subs_length], topic, USB_TALK_SUB_TOPIC_MAX_LENGTH);
 
         sub->topic = _usb_talk.subs_topic[_usb_talk.subs_length];
+
+        _usb_talk.subs_length++;
     }
 
     sub->callback = callback;
@@ -111,9 +113,9 @@ void usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8
 
     sub->param = param;
 
-    _usb_talk.subs_length++;
-
     _usb_talk_read_start();
+
+    return true;
 }
 
 void usb_talk_send_string(const char *buffer)

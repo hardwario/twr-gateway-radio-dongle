@@ -1,5 +1,6 @@
 #include <eeprom.h>
 #include <usb_talk.h>
+#include <bc_radio.h>
 
 static struct
 {
@@ -25,6 +26,41 @@ void eeprom_init(void)
     if (buffer[0] == neg)
     {
         _eeprom.alias_length = buffer[0];
+    }
+
+    // Remove alias for unknown nodes
+    uint32_t address = EEPROM_ALIAS_ADDRESS_START;
+
+    uint64_t tmp_id;
+
+    uint64_t id_on_remove;
+
+    while (true)
+    {
+        id_on_remove = 0;
+
+        for (int i = 0; i < _eeprom.alias_length; i++)
+        {
+            bc_eeprom_read(address, &tmp_id, sizeof(tmp_id));
+
+            if (!bc_radio_is_peer_device(tmp_id))
+            {
+                id_on_remove = tmp_id;
+
+                break;
+            }
+
+            address += EEPROM_ALIAS_ROW_LENGTH;
+        }
+
+        if (id_on_remove != 0)
+        {
+            eeprom_alias_remove(&id_on_remove);
+        }
+        else
+        {
+            break;
+        }
     }
 }
 

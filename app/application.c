@@ -100,13 +100,13 @@ void application_init(void)
     bc_led_init(&led, GPIO_LED, false, false);
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
-    eeprom_init();
-
     usb_talk_init();
     usb_talk_subscribes(subscribes, sizeof(subscribes) / sizeof(usb_talk_subscribe_t));
 
     bc_radio_init(BC_RADIO_MODE_GATEWAY);
     bc_radio_set_event_handler(radio_event_handler, NULL);
+
+    eeprom_init();
 
 #if CORE_MODULE
     bc_module_power_init();
@@ -281,19 +281,14 @@ void bc_radio_on_info(uint64_t *id, char *firmware, char *version, bc_radio_mode
 
 void bc_radio_on_sub(uint64_t *id, uint8_t *number, bc_radio_sub_pt_t *pt, char *topic)
 {
-    static bc_radio_sub_pt_t subs_type[USB_TALK_SUB_LENGTH];
-
-    static int subs_pt_length = 0;
-
     bc_led_pulse(&led, 10);
+
+    bc_radio_sub_pt_t payload_type = *pt;
+
+    usb_talk_add_sub(topic, radio_sub_callback, *number, (void *) payload_type); // Small trick, save number as pointer
 
     usb_talk_send_format("[\"$sub\", {\"topic\": \"" USB_TALK_DEVICE_ADDRESS "/%s\", \"pt\": %d}]\n", *id, topic, *pt);
 
-    subs_type[subs_pt_length] = *pt;
-
-    usb_talk_add_sub(topic, radio_sub_callback, *number, &subs_type[subs_pt_length]);
-
-    subs_pt_length++;
 }
 
 void bc_radio_pub_on_bool(uint64_t *id, char *subtopic, bool *value)
@@ -960,13 +955,13 @@ static void alias_list(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subsc
 
 static void radio_sub_callback(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
 {
-    bc_radio_sub_pt_t *pt = (bc_radio_sub_pt_t *) sub->param;
+    bc_radio_sub_pt_t payload_type = (bc_radio_sub_pt_t) sub->param;
 
     uint8_t value[41];
 
-    size_t value_size;
+    size_t value_size = 0;
 
-    switch (*pt) {
+    switch (payload_type) {
         case BC_RADIO_SUB_PT_BOOL:
         {
             if (!usb_talk_payload_get_bool(payload, (bool *) value))
@@ -1011,6 +1006,10 @@ static void radio_sub_callback(uint64_t *id, usb_talk_payload_t *payload, usb_ta
 
             value_size += 1;
 
+            break;
+        }
+        case BC_RADIO_SUB_PT_NULL:
+        {
             break;
         }
         default:

@@ -675,7 +675,7 @@ static void led_strip_effect_set(uint64_t *id, usb_talk_payload_t *payload, usb_
     int wait;
     uint32_t color;
 
-    if (!usb_talk_payload_get_key_enum(payload, "type", &type, "test", "rainbow", "rainbow-cycle", "theater-chase-rainbow", "color-wipe", "theater-chase"))
+    if (!usb_talk_payload_get_key_enum(payload, "type", &type, "test", "rainbow", "rainbow-cycle", "theater-chase-rainbow", "color-wipe", "theater-chase", "stroboscope", "icicle", "pulse-color"))
     {
         return;
     }
@@ -693,7 +693,7 @@ static void led_strip_effect_set(uint64_t *id, usb_talk_payload_t *payload, usb_
         }
     }
 
-    if ((type == BC_RADIO_NODE_LED_STRIP_EFFECT_COLOR_WIPE) || (type == BC_RADIO_NODE_LED_STRIP_EFFECT_THEATER_CHASE))
+    if ((type == BC_RADIO_NODE_LED_STRIP_EFFECT_COLOR_WIPE) || (type == BC_RADIO_NODE_LED_STRIP_EFFECT_THEATER_CHASE) || (type == BC_RADIO_NODE_LED_STRIP_EFFECT_STROBOSCOPE) || (type == BC_RADIO_NODE_LED_STRIP_EFFECT_ICICLE) || (type == BC_RADIO_NODE_LED_STRIP_EFFECT_PULSE_COLOR))
     {
         if (!usb_talk_payload_get_key_color(payload, "color", &color))
         {
@@ -1075,7 +1075,7 @@ static void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event,
         return;
     }
 
-    if (self->_channel.virtual_channel == BC_MODULE_LCD_BUTTON_LEFT)
+    if (self->_channel.virtual == BC_MODULE_LCD_BUTTON_LEFT)
     {
         static uint16_t event_left_count = 0;
         usb_talk_publish_event_count(&my_id, "push-button/lcd:left", &event_left_count);

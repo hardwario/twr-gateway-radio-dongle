@@ -1,0 +1,6 @@
+description: Gateway firmware for Radio USB Dongle.
+assembly:
+  - name: BigClown USB Dongle
+  - name: BigClown Core Module
+    optional: true
+ 

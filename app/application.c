@@ -481,7 +481,7 @@ static void module_relay_state_get(uint64_t *id, usb_talk_payload_t *payload, us
 {
     (void) payload;
 
-    if (my_id == *id)
+    if (my_id != *id)
     {
         bc_radio_node_state_get(id, sub->number == 0 ? BC_RADIO_NODE_STATE_RELAY_MODULE_0 : BC_RADIO_NODE_STATE_RELAY_MODULE_1);
     }

@@ -272,6 +272,13 @@ void bc_radio_pub_on_acceleration(uint64_t *id, float *x_axis, float *y_axis, fl
     usb_talk_publish_accelerometer_acceleration(id, x_axis, y_axis, z_axis);
 }
 
+void bc_radio_pub_on_buffer(uint64_t *id, void *buffer, size_t length)
+{
+    bc_led_pulse(&led, 10);
+
+    usb_talk_publish_buffer(id, buffer, length);
+}
+
 void bc_radio_on_info(uint64_t *id, char *firmware, char *version, bc_radio_mode_t mode)
 {
     bc_led_pulse(&led, 10);

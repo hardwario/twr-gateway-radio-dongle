@@ -442,6 +442,24 @@ void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float
     usb_talk_message_send();
 }
 
+void usb_talk_publish_buffer(uint64_t *device_address, void *buffer, size_t length)
+{
+    usb_talk_message_start_id(device_address, "buffer/-/data");
+
+    _usb_talk.tx_buffer[_usb_talk.tx_length++] = '[';
+
+    for (size_t i = 0; i < length; i++)
+    {
+        usb_talk_message_append("%d, ", ((uint8_t *) buffer)[i]);
+    }
+    
+    _usb_talk.tx_length--;
+
+    _usb_talk.tx_buffer[_usb_talk.tx_length - 1] = ']';
+
+    usb_talk_message_send();
+}
+
 void usb_talk_publish_nodes(uint64_t *peer_devices_address, int lenght)
 {
     int offset = snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),

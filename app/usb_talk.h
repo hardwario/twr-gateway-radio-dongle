@@ -64,6 +64,7 @@ void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, bc
 void usb_talk_publish_encoder(uint64_t *device_address, int *increment);
 void usb_talk_publish_flood_detector(uint64_t *device_address, const char *number, bool *state);
 void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float *x_axis, float *y_axis, float *z_axis);
+void usb_talk_publish_buffer(uint64_t *device_address, void *buffer, size_t length);
 void usb_talk_publish_nodes(uint64_t *peer_devices_address, int lenght);
 void usb_talk_publish_node(const char *event, uint64_t *peer_device_address);
 

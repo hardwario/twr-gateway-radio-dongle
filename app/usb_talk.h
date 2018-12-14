@@ -16,7 +16,7 @@
 
 typedef struct
 {
-    const char *buffer;
+    char *buffer;
     int token_count;
     jsmntok_t *tokens;
 

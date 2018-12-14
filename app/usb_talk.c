@@ -2,7 +2,7 @@
 #include <bc_scheduler.h>
 #include <bc_usb_cdc.h>
 #include <bc_radio_pub.h>
-#include <base64.h>
+#include <bc_base64.h>
 #include <application.h>
 
 #define USB_TALK_MAX_TOKENS 100
@@ -452,7 +452,7 @@ void usb_talk_publish_buffer(uint64_t *device_address, void *buffer, size_t leng
     {
         usb_talk_message_append("%d, ", ((uint8_t *) buffer)[i]);
     }
-    
+
     _usb_talk.tx_length--;
 
     _usb_talk.tx_buffer[_usb_talk.tx_length - 1] = ']';
@@ -712,14 +712,14 @@ bool usb_talk_payload_get_data(usb_talk_payload_t *payload, uint8_t *buffer, siz
 
     uint32_t input_length = payload->tokens[0].end - payload->tokens[0].start;
 
-    size_t data_length = base64_calculate_decode_length(&payload->buffer[payload->tokens[0].start], input_length);
+    size_t data_length = bc_base64_calculate_decode_length(&payload->buffer[payload->tokens[0].start], input_length);
 
     if (data_length > *length)
     {
         return false;
     }
 
-    return base64_decode(&payload->buffer[payload->tokens[0].start], input_length, buffer, (uint32_t *)length);
+    return bc_base64_decode( buffer, length, &payload->buffer[payload->tokens[0].start], input_length);
 }
 
 bool usb_talk_payload_get_key_data(usb_talk_payload_t *payload, const char *key, uint8_t *buffer, size_t *length)
@@ -740,14 +740,14 @@ bool usb_talk_payload_get_key_data(usb_talk_payload_t *payload, const char *key,
 
             uint32_t input_length = payload->tokens[i + 1].end - payload->tokens[i + 1].start;
 
-            size_t data_length = base64_calculate_decode_length(&payload->buffer[payload->tokens[i + 1].start], input_length);
+            size_t data_length = bc_base64_calculate_decode_length(&payload->buffer[payload->tokens[i + 1].start], input_length);
 
             if (data_length > *length)
             {
                 return false;
             }
 
-            return base64_decode(&payload->buffer[payload->tokens[i + 1].start], input_length, buffer, (uint32_t *)length);
+            return bc_base64_decode(buffer, length, &payload->buffer[payload->tokens[i + 1].start], input_length);
         }
     }
     return false;

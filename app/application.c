@@ -200,6 +200,10 @@ void bc_radio_pub_on_event_count(uint64_t *id, uint8_t event_id, uint16_t *event
     {
         usb_talk_publish_event_count(id, "accelerometer/-", event_count);
     }
+    else if (event_id == BC_RADIO_PUB_EVENT_HOLD_BUTTON)
+    {
+        usb_talk_send_format("[\"%012llx/push-button/-/hold-count\", %" PRIu16 "]\n", *id, *event_count);
+    }
 }
 
 void bc_radio_pub_on_temperature(uint64_t *id, uint8_t channel, float *celsius)
@@ -262,6 +266,16 @@ void bc_radio_pub_on_state(uint64_t *id, uint8_t who, bool *state)
     if (who < 4)
     {
         usb_talk_publish_bool(id, lut[who], state);
+    }
+}
+
+void bc_radio_pub_on_value_int(uint64_t *id, uint8_t value_id, int *value)
+{
+    bc_led_pulse(&led, 10);
+
+    if (value_id == BC_RADIO_PUB_VALUE_HOLD_DURATION_BUTTON)
+    {
+        usb_talk_send_format("[\"%012llx/push-button/-/hold-duration\", %d]\n", *id, *value);
     }
 }
 

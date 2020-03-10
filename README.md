@@ -1,17 +1,17 @@
-<a href="https://www.bigclown.com/"><img src="https://bigclown.sirv.com/logo.png" width="200" alt="BigClown Logo" align="right"></a>
+<a href="https://www.hardwario.com/"><img src="https://www.hardwario.com/ci/assets/hw-logo.svg" width="200" alt="HARDWARIO Logo" align="right"></a>
 
-# Firmware for BigClown USB Gateway
+# Firmware for HARDWARIO USB Gateway
 
 [![Travis](https://img.shields.io/travis/bigclownlabs/bcf-gateway/master.svg)](https://travis-ci.org/bigclownlabs/bcf-gateway)
 [![Release](https://img.shields.io/github/release/bigclownlabs/bcf-gateway.svg)](https://github.com/bigclownlabs/bcf-gateway/releases)
 [![License](https://img.shields.io/github/license/bigclownlabs/bcf-gateway.svg)](https://github.com/bigclownlabs/bcf-gateway/blob/master/LICENSE)
-[![Twitter](https://img.shields.io/twitter/follow/BigClownLabs.svg?style=social&label=Follow)](https://twitter.com/BigClownLabs)
+[![Twitter](https://img.shields.io/twitter/follow/hardwario_en.svg?style=social&label=Follow)](https://twitter.com/hardwario_en)
 
-This repository contains firmware for BigClown USB Gateway.
+This repository contains firmware for HARDWARIO USB Gateway.
 
 ## Firmware Programming
 
-You need to install [BigClown Toolchain](https://www.bigclown.com/doc/tutorials/toolchain-setup/) with [BigClown Firmware Tool](https://www.bigclown.com/doc/tutorials/toolchain-guide/) at first.
+You need to install [HARDWARIO Toolchain](https://developers.hardwario.com/firmware/toolchain-setup) with [HARDWARIO Firmware Tool](https://developers.hardwario.com/firmware/toolchain-guide) at first.
 
 Programming firmware for USB gateway:
 
@@ -138,9 +138,9 @@ Commands can be sent only to nodes powered by the power module, or usb-gateway.
 #### LCD module
   * Write text, supported font size [11, 13, 15, 24, 28, 33], default font is 15, color can by true or false, default is true
     ```
-    mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 10, "text": "BigClown"}'
-    mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 40, "text": "BigClown", "font": 28}'
-    mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 10, "text": "BigClown", "color": true}'
+    mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 10, "text": "HARDWARIO"}'
+    mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 40, "text": "HARDWARIO", "font": 28}'
+    mosquitto_pub -t "node/{id}/lcd/-/text/set" -m '{"x": 5, "y": 10, "text": "HARDWARIO", "color": true}'
     ```
 
   * Clear

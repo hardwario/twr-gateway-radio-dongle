@@ -1,7 +1,7 @@
 #ifndef APP_EEPROM_H
 #define APP_EEPROM_H
 
-#include <bc_eeprom.h>
+#include <twr_eeprom.h>
 
 #define EEPROM_ALIAS_ADDRESS_LENGTH    0x00
 #define EEPROM_ALIAS_ADDRESS_START     0x04

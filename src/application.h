@@ -5,19 +5,15 @@
 #define CORE_MODULE 0
 #endif
 
-#ifndef VERSION
-#define VERSION "vdev"
-#endif
-
 #if CORE_MODULE
-#define FIRMWARE "bcf-gateway-core-module"
+#define FIRMWARE "twr-gateway-core-module"
 #define TALK_OVER_CDC 1
-#define GPIO_LED BC_GPIO_LED
+#define GPIO_LED TWR_GPIO_LED
 #else
-#define FIRMWARE "bcf-gateway-usb-dongle"
+#define FIRMWARE "twr-gateway-radio-dongle"
 #define GPIO_LED 19
 #endif
 
-#include <bcl.h>
+#include <twr.h>
 
 #endif

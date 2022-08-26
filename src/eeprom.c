@@ -1,6 +1,6 @@
 #include <eeprom.h>
 #include <usb_talk.h>
-#include <bc_radio.h>
+#include <twr_radio.h>
 
 static struct
 {
@@ -19,7 +19,7 @@ void eeprom_init(void)
 
     uint8_t buffer[2];
 
-    bc_eeprom_read(EEPROM_ALIAS_ADDRESS_LENGTH, buffer, sizeof(buffer));
+    twr_eeprom_read(EEPROM_ALIAS_ADDRESS_LENGTH, buffer, sizeof(buffer));
 
     uint8_t neg = ~buffer[1];
 
@@ -41,9 +41,9 @@ void eeprom_init(void)
 
         for (int i = 0; i < _eeprom.alias_length; i++)
         {
-            bc_eeprom_read(address, &tmp_id, sizeof(tmp_id));
+            twr_eeprom_read(address, &tmp_id, sizeof(tmp_id));
 
-            if (!bc_radio_is_peer_device(tmp_id))
+            if (!twr_radio_is_peer_device(tmp_id))
             {
                 id_on_remove = tmp_id;
 
@@ -81,7 +81,7 @@ void eeprom_alias_add(uint64_t *id, char *name)
 
     memcpy(_eeprom.buffer + 8, name, 32);
 
-    if (!bc_eeprom_write(address, _eeprom.buffer, EEPROM_ALIAS_ROW_LENGTH))
+    if (!twr_eeprom_write(address, _eeprom.buffer, EEPROM_ALIAS_ROW_LENGTH))
     {
         usb_talk_send_format("[\"$eeprom/alias/add/error\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", *id);
 
@@ -112,11 +112,11 @@ void eeprom_alias_remove(uint64_t *id)
             // laste record
             uint32_t address = EEPROM_ALIAS_ADDRESS_START + ((_eeprom.alias_length - 1) * EEPROM_ALIAS_ROW_LENGTH);
 
-            bc_eeprom_read(address, _eeprom.buffer, EEPROM_ALIAS_ROW_LENGTH);
+            twr_eeprom_read(address, _eeprom.buffer, EEPROM_ALIAS_ROW_LENGTH);
 
             address = EEPROM_ALIAS_ADDRESS_START + (i * EEPROM_ALIAS_ROW_LENGTH);
 
-            if (!bc_eeprom_write(address, _eeprom.buffer, EEPROM_ALIAS_ROW_LENGTH))
+            if (!twr_eeprom_write(address, _eeprom.buffer, EEPROM_ALIAS_ROW_LENGTH))
             {
                 usb_talk_send_format("[\"$eeprom/alias/remove/error\", \"" USB_TALK_DEVICE_ADDRESS "\"]\n", *id);
 
@@ -160,7 +160,7 @@ void eeprom_alias_list(int page)
     {
         address = EEPROM_ALIAS_ADDRESS_START + (i * EEPROM_ALIAS_ROW_LENGTH);
 
-        bc_eeprom_read(address, _eeprom.buffer, EEPROM_ALIAS_ROW_LENGTH);
+        twr_eeprom_read(address, _eeprom.buffer, EEPROM_ALIAS_ROW_LENGTH);
 
         if (comma)
         {
@@ -191,7 +191,7 @@ static int _eeprom_alias_find_position_for_id(uint64_t *id)
 
     for (int i = 0; i < _eeprom.alias_length; i++)
     {
-        bc_eeprom_read(address, &tmp_id, sizeof(tmp_id));
+        twr_eeprom_read(address, &tmp_id, sizeof(tmp_id));
 
         if (tmp_id == *id)
         {
@@ -211,7 +211,7 @@ static bool _eeprom_alias_length_set(uint8_t length)
     buffer[0] = length;
     buffer[1] = ~length;
 
-    if (!bc_eeprom_write(EEPROM_ALIAS_ADDRESS_LENGTH, buffer, sizeof(buffer)))
+    if (!twr_eeprom_write(EEPROM_ALIAS_ADDRESS_LENGTH, buffer, sizeof(buffer)))
     {
         return false;
     }

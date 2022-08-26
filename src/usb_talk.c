@@ -1,8 +1,8 @@
 #include <usb_talk.h>
-#include <bc_scheduler.h>
-#include <bc_usb_cdc.h>
-#include <bc_radio_pub.h>
-#include <bc_base64.h>
+#include <twr_scheduler.h>
+#include <twr_usb_cdc.h>
+#include <twr_radio_pub.h>
+#include <twr_base64.h>
 #include <application.h>
 
 #define USB_TALK_MAX_TOKENS 100
@@ -33,9 +33,9 @@ static struct
 #if TALK_OVER_CDC
 #else
     uint8_t read_fifo_buffer[1024];
-    bc_fifo_t read_fifo;
+    twr_fifo_t read_fifo;
     uint8_t write_fifo_buffer[1024];
-    bc_fifo_t write_fifo;
+    twr_fifo_t write_fifo;
 #endif
 
 } _usb_talk;
@@ -43,7 +43,7 @@ static struct
 #if TALK_OVER_CDC
 static void _usb_talk_cdc_read_task(void *param);
 #else
-static void _usb_talk_uart_event_handler(bc_uart_channel_t channel, bc_uart_event_t event, void  *event_param);
+static void _usb_talk_uart_event_handler(twr_uart_channel_t channel, twr_uart_event_t event, void  *event_param);
 #endif
 static void _usb_talk_read_start(void);
 static void _usb_talk_process_character(char character);
@@ -59,12 +59,12 @@ void usb_talk_init(void)
     memset(&_usb_talk, 0, sizeof(_usb_talk));
 
 #if TALK_OVER_CDC
-    bc_usb_cdc_init();
+    twr_usb_cdc_init();
 #else
-    bc_fifo_init(&_usb_talk.read_fifo, _usb_talk.read_fifo_buffer, sizeof(_usb_talk.read_fifo_buffer));
-    bc_fifo_init(&_usb_talk.write_fifo, _usb_talk.write_fifo_buffer, sizeof(_usb_talk.write_fifo_buffer));
-    bc_uart_init(BC_UART_UART2, BC_UART_BAUDRATE_115200, BC_UART_SETTING_8N1);
-    bc_uart_set_async_fifo(BC_UART_UART2, &_usb_talk.write_fifo, &_usb_talk.read_fifo);
+    twr_fifo_init(&_usb_talk.read_fifo, _usb_talk.read_fifo_buffer, sizeof(_usb_talk.read_fifo_buffer));
+    twr_fifo_init(&_usb_talk.write_fifo, _usb_talk.write_fifo_buffer, sizeof(_usb_talk.write_fifo_buffer));
+    twr_uart_init(TWR_UART_UART2, TWR_UART_BAUDRATE_115200, TWR_UART_SETTING_8N1);
+    twr_uart_set_async_fifo(TWR_UART_UART2, &_usb_talk.write_fifo, &_usb_talk.read_fifo);
 #endif
 }
 
@@ -121,9 +121,9 @@ bool usb_talk_add_sub(const char *topic, usb_talk_sub_callback_t callback, uint8
 void usb_talk_send_string(const char *buffer)
 {
 #if TALK_OVER_CDC
-    bc_usb_cdc_write(buffer, strlen(buffer));
+    twr_usb_cdc_write(buffer, strlen(buffer));
 #else
-    bc_uart_async_write(BC_UART_UART2, buffer, strlen(buffer));
+    twr_uart_async_write(TWR_UART_UART2, buffer, strlen(buffer));
 #endif
 }
 
@@ -137,9 +137,9 @@ void usb_talk_send_format(const char *format, ...)
     va_end(ap);
 
 #if TALK_OVER_CDC
-    bc_usb_cdc_write(_usb_talk.tx_buffer, length);
+    twr_usb_cdc_write(_usb_talk.tx_buffer, length);
 #else
-    bc_uart_async_write(BC_UART_UART2, _usb_talk.tx_buffer, length);
+    twr_uart_async_write(TWR_UART_UART2, _usb_talk.tx_buffer, length);
 #endif
 }
 
@@ -214,9 +214,9 @@ void usb_talk_message_send(void)
     _usb_talk.tx_length += 2;
 
 #if TALK_OVER_CDC
-    bc_usb_cdc_write(_usb_talk.tx_buffer, _usb_talk.tx_length);
+    twr_usb_cdc_write(_usb_talk.tx_buffer, _usb_talk.tx_length);
 #else
-    bc_uart_async_write(BC_UART_UART2, _usb_talk.tx_buffer, _usb_talk.tx_length);
+    twr_uart_async_write(TWR_UART_UART2, _usb_talk.tx_buffer, _usb_talk.tx_length);
 #endif
 }
 
@@ -298,17 +298,17 @@ void usb_talk_publish_led(uint64_t *device_address, bool *state)
 
 void usb_talk_publish_temperature(uint64_t *device_address, uint8_t channel, float *celsius)
 {
-    if(channel == BC_RADIO_PUB_CHANNEL_A)
+    if(channel == TWR_RADIO_PUB_CHANNEL_A)
     {
         usb_talk_publish_float(device_address, "thermometer/a/temperature", celsius);
         return;
     }
-    else if (channel == BC_RADIO_PUB_CHANNEL_B)
+    else if (channel == TWR_RADIO_PUB_CHANNEL_B)
     {
         usb_talk_publish_float(device_address, "thermometer/b/temperature", celsius);
         return;
     }
-    else if (channel == BC_RADIO_PUB_CHANNEL_SET_POINT)
+    else if (channel == TWR_RADIO_PUB_CHANNEL_SET_POINT)
     {
         usb_talk_publish_float(device_address, "thermometer/set-point/temperature", celsius);
         return;
@@ -372,9 +372,9 @@ void usb_talk_publish_relay(uint64_t *device_address, bool *state)
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, bc_module_relay_state_t *state)
+void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, twr_module_relay_state_t *state)
 {
-    if (*state == BC_MODULE_RELAY_STATE_UNKNOWN)
+    if (*state == TWR_MODULE_RELAY_STATE_UNKNOWN)
     {
         snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                     "[\"%012llx/relay/0:%d/state\", null]\n",
@@ -384,7 +384,7 @@ void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, bc
     {
         snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                     "[\"%012llx/relay/0:%d/state\", %s]\n",
-                    *device_address, *number, *state == BC_MODULE_RELAY_STATE_TRUE ? "true" : "false");
+                    *device_address, *number, *state == TWR_MODULE_RELAY_STATE_TRUE ? "true" : "false");
     }
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
@@ -493,7 +493,7 @@ static void _usb_talk_cdc_read_task(void *param)
     {
         static uint8_t buffer[16];
 
-        size_t length = bc_usb_cdc_read(buffer, sizeof(buffer));
+        size_t length = twr_usb_cdc_read(buffer, sizeof(buffer));
 
         if (length == 0)
         {
@@ -506,22 +506,22 @@ static void _usb_talk_cdc_read_task(void *param)
         }
     }
 
-    bc_scheduler_plan_current_now();
+    twr_scheduler_plan_current_now();
 }
 #else
 
-static void _usb_talk_uart_event_handler(bc_uart_channel_t channel, bc_uart_event_t event, void  *event_param)
+static void _usb_talk_uart_event_handler(twr_uart_channel_t channel, twr_uart_event_t event, void  *event_param)
 {
     (void) channel;
     (void) event_param;
 
-    if (event == BC_UART_EVENT_ASYNC_READ_DATA)
+    if (event == TWR_UART_EVENT_ASYNC_READ_DATA)
     {
         while (true)
         {
             static uint8_t buffer[16];
 
-            size_t length = bc_uart_async_read(BC_UART_UART2, buffer, sizeof(buffer));
+            size_t length = twr_uart_async_read(TWR_UART_UART2, buffer, sizeof(buffer));
 
             if (length == 0)
             {
@@ -547,10 +547,10 @@ void _usb_talk_read_start(void)
     if (((_usb_talk.subscribes != NULL) && (_usb_talk.subscribes_length > 0)) || ((_usb_talk.subs != NULL) && (_usb_talk.subs_length > 0)))
     {
 #if TALK_OVER_CDC
-        bc_scheduler_register(_usb_talk_cdc_read_task, NULL, 0);
+        twr_scheduler_register(_usb_talk_cdc_read_task, NULL, 0);
 #else
-        bc_uart_set_event_handler(BC_UART_UART2, _usb_talk_uart_event_handler, NULL);
-        bc_uart_async_read_start(BC_UART_UART2, 1000000);
+        twr_uart_set_event_handler(TWR_UART_UART2, _usb_talk_uart_event_handler, NULL);
+        twr_uart_async_read_start(TWR_UART_UART2, 1000000);
 #endif
 
         _usb_talk.read_start = true;
@@ -712,14 +712,14 @@ bool usb_talk_payload_get_data(usb_talk_payload_t *payload, uint8_t *buffer, siz
 
     uint32_t input_length = payload->tokens[0].end - payload->tokens[0].start;
 
-    size_t data_length = bc_base64_calculate_decode_length(&payload->buffer[payload->tokens[0].start], input_length);
+    size_t data_length = twr_base64_calculate_decode_length(&payload->buffer[payload->tokens[0].start], input_length);
 
     if (data_length > *length)
     {
         return false;
     }
 
-    return bc_base64_decode( buffer, length, &payload->buffer[payload->tokens[0].start], input_length);
+    return twr_base64_decode( buffer, length, &payload->buffer[payload->tokens[0].start], input_length);
 }
 
 bool usb_talk_payload_get_key_data(usb_talk_payload_t *payload, const char *key, uint8_t *buffer, size_t *length)
@@ -740,14 +740,14 @@ bool usb_talk_payload_get_key_data(usb_talk_payload_t *payload, const char *key,
 
             uint32_t input_length = payload->tokens[i + 1].end - payload->tokens[i + 1].start;
 
-            size_t data_length = bc_base64_calculate_decode_length(&payload->buffer[payload->tokens[i + 1].start], input_length);
+            size_t data_length = twr_base64_calculate_decode_length(&payload->buffer[payload->tokens[i + 1].start], input_length);
 
             if (data_length > *length)
             {
                 return false;
             }
 
-            return bc_base64_decode(buffer, length, &payload->buffer[payload->tokens[i + 1].start], input_length);
+            return twr_base64_decode(buffer, length, &payload->buffer[payload->tokens[i + 1].start], input_length);
         }
     }
     return false;

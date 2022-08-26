@@ -1,0 +1,51 @@
+name: main
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: release
+  FW_VERSION: ${GITHUB_REF##*/}
+  REPOSITORY_NAME: ${GITHUB_REPOSITORY##*/}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Setup GNU Arm Embedded Toolchain
+      uses: carlosperate/arm-none-eabi-gcc-action@v1.4.0
+
+    - name: Setup env
+      run: |
+        echo "REPORSIORY=${{env.REPOSITORY_NAME}}" >> "$GITHUB_ENV"
+        echo "FW_VERSION=${{env.FW_VERSION}}" >> "$GITHUB_ENV"
+
+    - name: Setup Ninja
+      uses: ashutoshvarma/setup-ninja@v1.1
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/obj/${{env.BUILD_TYPE}} . -G Ninja -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/sdk/toolchain/toolchain.cmake -DTYPE=${{env.BUILD_TYPE}}
+
+    - name: Build With Ninja
+      run: ninja -C ${{github.workspace}}/obj/${{env.BUILD_TYPE}}
+
+    - name: Rename Firmware
+      if: ${{ github.event_name == 'release' }}
+      run: mv ${{github.workspace}}/out/release/firmware.bin ${{env.REPOSITORY_NAME}}-${{env.FW_VERSION}}.bin
+
+    - name: Release
+      if: ${{ github.event_name == 'release' }}
+      uses: softprops/action-gh-release@v0.1.5
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        files: ${{env.REPORSIORY}}-${{env.FW_VERSION}}.bin

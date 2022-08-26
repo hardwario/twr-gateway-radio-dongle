@@ -1,9 +1,9 @@
 #ifndef _USB_TALK_H
 #define _USB_TALK_H
 
-#include <bc_common.h>
+#include <twr_common.h>
 #include <jsmn.h>
-#include <bc_module_relay.h>
+#include <twr_module_relay.h>
 
 #ifndef USB_TALK_SUB_LENGTH
 #define USB_TALK_SUB_LENGTH 32
@@ -60,7 +60,7 @@ void usb_talk_publish_lux_meter(uint64_t *device_address, uint8_t channel, float
 void usb_talk_publish_barometer(uint64_t *device_address, uint8_t channel, float *pascal, float *altitude);
 void usb_talk_publish_co2(uint64_t *device_address, float *concentration);
 void usb_talk_publish_relay(uint64_t *device_address, bool *state);
-void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, bc_module_relay_state_t *state);
+void usb_talk_publish_module_relay(uint64_t *device_address, uint8_t *number, twr_module_relay_state_t *state);
 void usb_talk_publish_encoder(uint64_t *device_address, int *increment);
 void usb_talk_publish_flood_detector(uint64_t *device_address, const char *number, bool *state);
 void usb_talk_publish_accelerometer_acceleration(uint64_t *device_address, float *x_axis, float *y_axis, float *z_axis);

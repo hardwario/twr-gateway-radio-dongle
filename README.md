@@ -21,7 +21,7 @@ Programming firmware for USB gateway:
     ```
 
   * USB Dongle:
-  
+
     Replace **/dev/ttyUSB0** with USB Dongle serial port (e.g. **COM0** on Windows)
     ```
     bcf flash --device /dev/ttyUSB0 bigclownlabs/bcf-gateway-usb-dongle:latest

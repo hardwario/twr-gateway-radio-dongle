@@ -2,9 +2,6 @@
 #include <radio.h>
 #include <usb_talk.h>
 #include <eeprom.h>
-#if CORE_MODULE
-#include <sensors.h>
-#endif
 
 #define APPLICATION_TASK_ID 0
 
@@ -12,20 +9,6 @@ static uint64_t my_id;
 static twr_led_t led;
 static bool led_state;
 static bool radio_pairing_mode;
-
-#if CORE_MODULE
-static struct
-{
-    twr_tick_t next_update;
-    bool mqtt;
-} lcd;
-
-static twr_module_relay_t relay_0_0;
-static twr_module_relay_t relay_0_1;
-
-static void button_event_handler(twr_button_t *self, twr_button_event_t event, void *event_param);
-static void lcd_button_event_handler(twr_button_t *self, twr_button_event_t event, void *event_param);
-#endif
 
 static void radio_event_handler(twr_radio_event_t event, void *event_param);
 static void led_state_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub);
@@ -107,33 +90,6 @@ void application_init(void)
     twr_radio_set_event_handler(radio_event_handler, NULL);
 
     eeprom_init();
-
-#if CORE_MODULE
-    twr_module_power_init();
-
-    memset(&lcd, 0, sizeof(lcd));
-
-    twr_module_lcd_init();
-    twr_module_lcd_clear();
-    twr_module_lcd_update();
-
-    static twr_button_t button;
-    twr_button_init(&button, TWR_GPIO_BUTTON, TWR_GPIO_PULL_DOWN, false);
-    twr_button_set_event_handler(&button, button_event_handler, NULL);
-
-    static twr_button_t lcd_left;
-    twr_button_init_virtual(&lcd_left, TWR_MODULE_LCD_BUTTON_LEFT, twr_module_lcd_get_button_driver(), false);
-    twr_button_set_event_handler(&lcd_left, lcd_button_event_handler, NULL);
-
-    static twr_button_t lcd_right;
-    twr_button_init_virtual(&lcd_right, TWR_MODULE_LCD_BUTTON_RIGHT, twr_module_lcd_get_button_driver(), false);
-    twr_button_set_event_handler(&lcd_right, lcd_button_event_handler, NULL);
-
-    sensors_init_all(&my_id);
-
-    twr_module_relay_init(&relay_0_0, TWR_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
-    twr_module_relay_init(&relay_0_1, TWR_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
-#endif
 
     twr_led_pulse(&led, 2000);
 
@@ -454,14 +410,6 @@ static void module_relay_state_set(uint64_t *id, usb_talk_payload_t *payload, us
     {
         twr_radio_node_state_set(id, sub->number == 0 ? TWR_RADIO_NODE_STATE_RELAY_MODULE_0 : TWR_RADIO_NODE_STATE_RELAY_MODULE_1, &state);
     }
-#if CORE_MODULE
-    else
-    {
-        twr_module_relay_set_state(sub->number == 0 ? &relay_0_0 : &relay_0_1, state);
-        twr_module_relay_state_t relay_state = state ? TWR_MODULE_RELAY_STATE_TRUE : TWR_MODULE_RELAY_STATE_FALSE;
-        usb_talk_publish_module_relay(&my_id, &sub->number, &relay_state);
-    }
-#endif
 }
 
 static void module_relay_pulse(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -490,12 +438,6 @@ static void module_relay_pulse(uint64_t *id, usb_talk_payload_t *payload, usb_ta
 
         twr_radio_pub_buffer(buffer, sizeof(buffer));
     }
-#if CORE_MODULE
-    else
-    {
-        twr_module_relay_pulse(sub->number == 0 ? &relay_0_0 : &relay_0_1, direction, duration);
-    }
-#endif
 }
 
 static void module_relay_state_get(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -506,14 +448,6 @@ static void module_relay_state_get(uint64_t *id, usb_talk_payload_t *payload, us
     {
         twr_radio_node_state_get(id, sub->number == 0 ? TWR_RADIO_NODE_STATE_RELAY_MODULE_0 : TWR_RADIO_NODE_STATE_RELAY_MODULE_1);
     }
-#if CORE_MODULE
-    else
-    {
-        twr_module_relay_state_t state = twr_module_relay_get_state(sub->number == 0 ? &relay_0_0 : &relay_0_1);
-
-        usb_talk_publish_module_relay(&my_id, &sub->number, &state);
-    }
-#endif
 }
 
 static void lcd_text_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -551,58 +485,7 @@ static void lcd_text_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_sub
         color = true;
     }
 
-    if (my_id == *id)
-    {
-#if CORE_MODULE
-        if (!lcd.mqtt)
-        {
-            twr_module_lcd_clear();
-            lcd.mqtt = true;
-        }
-
-        switch (font_size)
-        {
-            case 11:
-            {
-                twr_module_lcd_set_font(&twr_font_ubuntu_11);
-                break;
-            }
-            case 13:
-            {
-                twr_module_lcd_set_font(&twr_font_ubuntu_13);
-                break;
-            }
-            case 15:
-            {
-                twr_module_lcd_set_font(&twr_font_ubuntu_15);
-                break;
-            }
-            case 24:
-            {
-                twr_module_lcd_set_font(&twr_font_ubuntu_24);
-                break;
-            }
-            case 28:
-            {
-                twr_module_lcd_set_font(&twr_font_ubuntu_28);
-                break;
-            }
-            case 33:
-            {
-                twr_module_lcd_set_font(&twr_font_ubuntu_33);
-                break;
-            }
-            default:
-            {
-                twr_module_lcd_set_font(&twr_font_ubuntu_15);
-                break;
-            }
-        }
-
-        twr_module_lcd_draw_string(x, y, text, color);
-#endif
-    }
-    else
+    if (my_id != *id)
     {
         uint8_t buffer[1 + sizeof(uint64_t) + 5 + 32]; // HEAD + ADDRESS + X + Y + FONT_SIZE + LENGTH + TEXT
         buffer[0] = RADIO_LCD_TEXT_SET;
@@ -630,12 +513,6 @@ static void lcd_screen_clear(uint64_t *id, usb_talk_payload_t *payload, usb_talk
         memcpy(buffer + 1, id, sizeof(uint64_t));
         twr_radio_pub_buffer(buffer, sizeof(buffer));
     }
-#if CORE_MODULE
-    else
-    {
-        twr_module_lcd_clear();
-    }
-#endif
 }
 
 static void led_strip_color_set(uint64_t *id, usb_talk_payload_t *payload, usb_talk_subscribe_t *sub)
@@ -1041,72 +918,3 @@ static void radio_sub_callback(uint64_t *id, usb_talk_payload_t *payload, usb_ta
 
     twr_radio_send_sub_data(id, sub->number, value, value_size);
 }
-
-#if CORE_MODULE
-void application_task(void)
-{
-    twr_tick_t now = twr_tick_get();
-    if (lcd.next_update < now)
-    {
-        twr_module_lcd_update();
-        lcd.next_update = now + 500;
-    }
-
-    twr_scheduler_plan_current_relative(500);
-}
-
-static void button_event_handler(twr_button_t *self, twr_button_event_t event, void *event_param)
-{
-    (void) self;
-    (void) event_param;
-
-    if (event == TWR_BUTTON_EVENT_PRESS)
-    {
-        static uint16_t event_count = 0;
-
-        usb_talk_publish_event_count(&my_id, "push-button/-", &event_count);
-
-        event_count++;
-        twr_led_pulse(&led, 100);
-    }
-    else if (event == TWR_BUTTON_EVENT_HOLD)
-    {
-        if (radio_pairing_mode)
-        {
-            radio_pairing_mode = false;
-            twr_radio_pairing_mode_stop();
-            twr_led_set_mode(&led, TWR_LED_MODE_OFF);
-            usb_talk_send_string("[\"/pairing-mode\", \"stop\"]\n");
-        }
-        else{
-            radio_pairing_mode = true;
-            twr_radio_pairing_mode_start();
-            twr_led_set_mode(&led, TWR_LED_MODE_BLINK_FAST);
-            usb_talk_send_string("[\"/pairing-mode\", \"start\"]\n");
-        }
-    }
-}
-
-static void lcd_button_event_handler(twr_button_t *self, twr_button_event_t event, void *event_param)
-{
-    (void) event_param;
-
-    if (event != TWR_BUTTON_EVENT_CLICK)
-    {
-        return;
-    }
-
-    if (self->_channel.virtual == TWR_MODULE_LCD_BUTTON_LEFT)
-    {
-        static uint16_t event_left_count = 0;
-        usb_talk_publish_event_count(&my_id, "push-button/lcd:left", &event_left_count);
-        event_left_count++;
-    }
-    else
-    {
-        static uint16_t event_right_count = 0;
-        usb_talk_publish_event_count(&my_id, "push-button/lcd:right", &event_right_count);
-        event_right_count++;
-    }
-}
-#endif

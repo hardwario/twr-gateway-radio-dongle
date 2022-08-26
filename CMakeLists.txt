@@ -8,11 +8,5 @@ add_subdirectory(sdk)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC TWR_SCHEDULER_MAX_TASKS=64)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC TWR_RADIO_MAX_DEVICES=32)
 
-if(DEFINED CORE_MODULE)
-    target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC CORE_MODULE=${CORE_MODULE})
-else()
-    target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC CORE_MODULE=0)
-endif()
-
 # If you need to add some source files to the project add them to the "src" folder and update CMakeLists there
 add_subdirectory(src)

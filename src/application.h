@@ -10,7 +10,9 @@
 #define TALK_OVER_CDC 1
 #define GPIO_LED TWR_GPIO_LED
 #else
-#define FIRMWARE "twr-gateway-radio-dongle"
+// TODO: Backwards compatibility - will be fixed later
+#define FIRMWARE "bcf-gateway-usb-dongle"
+//#define FIRMWARE "twr-gateway-radio-dongle"
 #define GPIO_LED 19
 #endif
 

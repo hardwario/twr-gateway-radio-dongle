@@ -32,15 +32,27 @@ jobs:
     - name: Setup Ninja
       uses: ashutoshvarma/setup-ninja@v1.1
 
-    - name: Configure CMake
+    - name: Configure CMake EU
       run: cmake -B ${{github.workspace}}/obj/${{env.BUILD_TYPE}} . -G Ninja -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/sdk/toolchain/toolchain.cmake -DTYPE=${{env.BUILD_TYPE}}
 
-    - name: Build With Ninja
+    - name: Build With Ninja EU
       run: ninja -C ${{github.workspace}}/obj/${{env.BUILD_TYPE}}
 
-    - name: Rename Firmware
+    - name: Rename Firmware EU
       if: ${{ github.event_name == 'release' }}
       run: mv ${{github.workspace}}/out/release/firmware.bin ${{env.REPOSITORY_NAME}}-${{env.FW_VERSION}}.bin
+
+    - name: Configure CMake US
+      env:
+        BAND: 915
+      run: cmake -B ${{github.workspace}}/obj/${{env.BUILD_TYPE}} . -G Ninja -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/sdk/toolchain/toolchain.cmake -DTYPE=${{env.BUILD_TYPE}}
+
+    - name: Build With Ninja US
+      run: ninja -C ${{github.workspace}}/obj/${{env.BUILD_TYPE}}
+
+    - name: Rename Firmware US
+      if: ${{ github.event_name == 'release' }}
+      run: mv ${{github.workspace}}/out/release/firmware.bin ${{env.REPOSITORY_NAME}}-${{env.FW_VERSION}}-us915.bin
 
     - name: Release
       if: ${{ github.event_name == 'release' }}
@@ -48,4 +60,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
       with:
-        files: ${{env.REPORSIORY}}-${{env.FW_VERSION}}.bin
+        files: |
+          ${{env.REPORSIORY}}-${{env.FW_VERSION}}.bin
+          ${{env.REPORSIORY}}-${{env.FW_VERSION}}-us915.bin

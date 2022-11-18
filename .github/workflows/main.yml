@@ -52,7 +52,7 @@ jobs:
 
     - name: Rename Firmware US
       if: ${{ github.event_name == 'release' }}
-      run: mv ${{github.workspace}}/out/release/firmware.bin ${{env.REPOSITORY_NAME}}-${{env.FW_VERSION}}-us915.bin
+      run: mv ${{github.workspace}}/out/release/firmware.bin ${{env.REPOSITORY_NAME}}-us915-${{env.FW_VERSION}}.bin
 
     - name: Release
       if: ${{ github.event_name == 'release' }}
@@ -62,4 +62,4 @@ jobs:
       with:
         files: |
           ${{env.REPORSIORY}}-${{env.FW_VERSION}}.bin
-          ${{env.REPORSIORY}}-${{env.FW_VERSION}}-us915.bin
+          ${{env.REPORSIORY}}-us915-${{env.FW_VERSION}}.bin
